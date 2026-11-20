@@ -226,6 +226,17 @@ describe("stealing rules & exploits", function()
 		expect(entity.model ~= nil).toBe(true)
 	end)
 
+	it("spawns every base's players facing the central avenue", function()
+		local env, S = boot()
+		for slot = 1, 8 do
+			local cf = S.BaseService:spawnCFrame(slot)
+			local look = cf.LookVector
+			-- bases sit on both sides of x = 0; facing the avenue means looking back toward x = 0
+			expect(math.abs(look.X) > 0.9).toBe(true)
+			expect(look.X * cf.Position.X < 0).toBe(true)
+		end
+	end)
+
 	it("returns the core when the carrier dies or leaves", function()
 		local env, S = boot()
 		local D = env.D

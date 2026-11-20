@@ -77,8 +77,9 @@ end
 function BaseService:spawnCFrame(slot)
 	local p = WorldLayout.spawnPosition(slot)
 	local cf = bases[slot].cf
-	-- face toward the avenue
-	return CFrame.new(p[1], p[2] + BaseBuilder.FLOOR_TOP, p[3]) * cf.Rotation
+	-- face toward the avenue (base local +X); the raw base rotation looks along local -Z,
+	-- which put the camera against the entrance pylon in Studio
+	return CFrame.new(p[1], p[2] + BaseBuilder.FLOOR_TOP, p[3]) * cf.Rotation * CFrame.Angles(0, -math.pi / 2, 0)
 end
 
 function BaseService:sendHome(player)
