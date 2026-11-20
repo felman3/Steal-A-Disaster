@@ -87,10 +87,26 @@ function QuickTravel.mount(screen, Panels)
 		})
 	end
 
-	-- start collapsed on small touch screens (phones)
+	-- phones: a 2-column grid in the top-right corner, always visible. A single
+	-- column there would overlap the touch jump button (found in the device simulator).
 	local cam = workspace.CurrentCamera
 	if UserInputService.TouchEnabled and cam and cam.ViewportSize.Y < 500 then
-		setExpanded(false)
+		local cell = SIZE + 8
+		list:Destroy()
+		toggle.Visible = false
+		local grid = Instance.new("UIGridLayout")
+		grid.CellSize = UDim2.new(0, cell, 0, cell)
+		grid.CellPadding = UDim2.new(0, GAP, 0, GAP)
+		grid.FillDirectionMaxCells = 2
+		grid.SortOrder = Enum.SortOrder.LayoutOrder
+		grid.HorizontalAlignment = Enum.HorizontalAlignment.Right
+		grid.Parent = col
+		for _, b in pairs(buttons) do
+			b.Size = UDim2.new(0, cell, 0, cell)
+		end
+		col.Size = UDim2.new(0, 2 * cell + GAP, 0, 3 * (cell + GAP))
+		col.Position = UDim2.new(1, -10, 0, 40)
+		col.AnchorPoint = Vector2.new(1, 0)
 	end
 
 	-- after a trip, put the camera behind the character so you arrive facing forward

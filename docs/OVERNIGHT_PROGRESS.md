@@ -1,6 +1,6 @@
 # Overnight progress (session handoff)
 
-_Last updated: after the "Shop categories + toast/banner Z-order" batch._
+_Last updated: after the "phone layout for Quick Travel + Zones panel" batch._
 
 ## 1. Status
 - Branch: `claude/adoring-albattani-tv15ea` (pushed to origin after each batch; never force-pushed).
@@ -20,6 +20,9 @@ _Last updated: after the "Shop categories + toast/banner Z-order" batch._
 - **Shop categories**: ⚡ SPEED / 🏠 BASE & CARRY / 🥚 INCUBATOR / 💎 GAME PASSES / 🎁 BOOSTS. All 5 Robux
   items now in the shop (Speed Boost + Instant Hatch also in-world). Panel title "🛒 SHOP".
   "Not enough money — you need $X more." message.
+- **Phone layout** (Galaxy A06 800x360 in the device simulator): Quick Travel becomes an always-visible 2x3
+  grid top-right on small touch screens (the single column overlapped the jump button; the collapse pill was a
+  40x16 px tap target). Zones panel text lines widened (6 px → 10 px on the smallest phone).
 - **Bug fixed**: toasts and announcement banners were drawn behind open panels (ZIndex 1 vs 10).
   Now Toasts 40, Banner 35 (`Announcer.lua`).
 
@@ -30,8 +33,7 @@ _Last updated: after the "Shop categories + toast/banner Z-order" batch._
 1. **Monetization products** — blocked on user (see 6). When unblocked: create 2 passes + 3 products
    (multipart POST with `imageFile` from `assets/icons`), re-list to read real IDs, put IDs in
    MonetizationConfig, rebuild, sync Studio, test purchases (Studio test purchase dialog), commit.
-2. UI overlap/responsiveness pass: phone sizes (Galaxy A06 800x360, iPhone), Zones panel + shop on phone,
-   Quick Travel collapsed state on touch, world labels (TREADMILL billboard is occluded by the base side
+2. UI pass, remaining: world labels (TREADMILL billboard is occluded by the base side
    wall at close range; pedestal labels show base income while HUD shows Double Cash total).
 3. Disaster Index improvements: search, rarity filter, sort, income per disaster, progress
    (existing index in `Panels.lua` buildIndex — extend, don't rebuild).

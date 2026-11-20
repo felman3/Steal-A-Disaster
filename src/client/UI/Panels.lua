@@ -413,10 +413,10 @@ local function buildZones(screen)
 		local row = Theme.frame(body, { name = "Zone" .. i, size = UDim2.new(1, -12, 0, 78), color = Theme.White, corner = 10, order = i, z = 12 })
 		local swatch = Theme.frame(row, { name = "Swatch", size = UDim2.new(0, 58, 0, 58), position = UDim2.new(0, 10, 0.5, 0), anchor = Vector2.new(0, 0.5), color = Theme.rgb(zone.sky.fog), corner = 10, z = 13 })
 		Theme.label(swatch, { name = "Num", text = tostring(i), size = UDim2.new(1, 0, 1, 0), font = Theme.FontDisplay, z = 14, strokeThickness = 2.5 })
-		local name = Theme.label(row, { name = "ZoneName", text = zone.name, size = UDim2.new(0.42, 0, 0.4, 0), position = UDim2.new(0, 78, 0.06, 0), xAlign = Enum.TextXAlignment.Left, color = Theme.Ink, stroke = false, font = Theme.FontDisplay, z = 13 })
+		local name = Theme.label(row, { name = "ZoneName", text = zone.name, size = UDim2.new(1, -214, 0.4, 0), position = UDim2.new(0, 78, 0.06, 0), xAlign = Enum.TextXAlignment.Left, color = Theme.Ink, stroke = false, font = Theme.FontDisplay, z = 13 })
 		local req = zone.speedReq > 0 and ("⚡ " .. Util.formatNumber(zone.speedReq) .. " Speed") or "⚡ No Speed needed"
-		local info = Theme.label(row, { name = "Info", text = req .. "  •  " .. rarityText(zone), size = UDim2.new(0.5, 0, 0.26, 0), position = UDim2.new(0, 78, 0.46, 0), xAlign = Enum.TextXAlignment.Left, color = Color3.fromRGB(90, 90, 110), stroke = false, z = 13 })
-		local status = Theme.label(row, { name = "Status", text = "", size = UDim2.new(0.5, 0, 0.22, 0), position = UDim2.new(0, 78, 0.73, 0), xAlign = Enum.TextXAlignment.Left, color = Theme.Green, stroke = false, z = 13 })
+		local info = Theme.label(row, { name = "Info", text = req .. "  •  " .. rarityText(zone), size = UDim2.new(1, -214, 0.28, 0), position = UDim2.new(0, 78, 0.46, 0), xAlign = Enum.TextXAlignment.Left, color = Color3.fromRGB(90, 90, 110), stroke = false, z = 13 })
+		local status = Theme.label(row, { name = "Status", text = "", size = UDim2.new(1, -214, 0.24, 0), position = UDim2.new(0, 78, 0.72, 0), xAlign = Enum.TextXAlignment.Left, color = Theme.Green, stroke = false, z = 13 })
 		local travel = Theme.button(row, {
 			name = "Travel",
 			text = "TRAVEL",
