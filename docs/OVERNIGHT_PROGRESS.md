@@ -7,7 +7,7 @@ _Last updated: end of overnight session 1 (all work committed and pushed)._
 - Latest commit: see `git log -1` (this file is committed with each batch).
 - Roblox: **published** by the user. Universe `10778014315`, root place `71402086993128`, visibility **PRIVATE**.
   Studio opens it from Roblox (Team Create). Studio id changes per session: use `list_roblox_studios`.
-  `save_place` = new place version (NOT a publish). Last saved version: 13.
+  `save_place` = new place version (NOT a publish). Last saved version: 14.
 - Monetization: code complete (ec9125e). **Products NOT created yet** (all ids are still 0 in
   `src/shared/Config/MonetizationConfig.lua`). Blocker below.
 
