@@ -226,6 +226,36 @@ describe("stealing rules & exploits", function()
 		expect(entity.model ~= nil).toBe(true)
 	end)
 
+	it("a rejected teleport does not poison the player's next steal", function()
+		-- Found in a 2-player Studio test: after one "Movement rejected", every later
+		-- steal by that player was dropped as a teleport on its first step.
+		local env, S = boot()
+		local D = env.D
+		local player = env.addPlayer("Retry")
+		env.advance(1)
+		sleepGuardian(S, 1)
+		local entity = firstNestEntity(S, 1)
+		env.walkTo(player, D.Vector3.new(entity.position.X, 3, entity.position.Z - 6))
+		entity.prompt.Triggered:Fire(player)
+		env.advance(0.1)
+		expect(S.CarryService:count(player)).toBe(1)
+		hrpOf(player).CFrame = S.BaseService:spawnCFrame(S.BaseService:slotOf(player))
+		env.advance(0.1)
+		expect(S.CarryService:count(player)).toBe(0)
+		-- walk back and steal again legitimately, then walk a few studs at normal speed
+		env.advance(2)
+		env.walkTo(player, D.Vector3.new(entity.position.X, 3, entity.position.Z - 6))
+		entity.prompt.Triggered:Fire(player)
+		env.advance(0.1)
+		expect(S.CarryService:count(player)).toBe(1)
+		for _ = 1, 10 do
+			hrpOf(player).CFrame = hrpOf(player).CFrame + D.Vector3.new(0, 0, -0.4)
+			env.advance(1 / 30)
+		end
+		expect(S.CarryService:count(player)).toBe(1)
+		noErrors(env)
+	end)
+
 	it("spawns every base's players facing the central avenue", function()
 		local env, S = boot()
 		for slot = 1, 8 do

@@ -123,6 +123,11 @@ end
 
 function CarryService:add(player, item)
 	local st = state(player)
+	if #st.items == 0 then
+		-- a fresh carry starts with a full movement budget; a budget drained by an
+		-- earlier teleport rejection must not drop this one on its first step
+		st.budget = nil
+	end
 	table.insert(st.items, item)
 	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	st.lastPos = hrp and hrp.Position or nil
