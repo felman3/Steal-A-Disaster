@@ -81,8 +81,9 @@ MonetizationConfig.Items = {
 	},
 }
 
--- Rows in the shop's Boosts section (Speed Boost and Instant Hatch live in the world).
-MonetizationConfig.BoostsOrder = { "TurboTreadmill", "DoubleCash", "CashPack" }
+-- Robux rows in the shop (Game Passes first, then one-time boosts). Speed Boost and
+-- Instant Hatch are also sold on the treadmill console and on incubating pods.
+MonetizationConfig.BoostsOrder = { "TurboTreadmill", "DoubleCash", "CashPack", "SpeedBoost", "InstantHatch" }
 
 -- Treadmill Speed multiplier is additive: x1 base, x2 with Turbo OR a Boost, x3 with both.
 MonetizationConfig.TurboSpeedBonus = 1

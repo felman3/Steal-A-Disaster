@@ -62,6 +62,11 @@ function UpgradeService:Start()
 			local def = Config.Upgrades[upgradeId]
 			local data = S.PlayerDataService:get(player)
 			S.PlayerDataService:notify(player, def.name .. " upgraded to Lv " .. data.upgrades[upgradeId] .. "!", "success")
+		elseif res == "Not enough money" then
+			local data = S.PlayerDataService:get(player)
+			local cost = data and UpgradeLogic.nextCost(data, upgradeId)
+			local short = cost and (cost - data.money) or 0
+			S.PlayerDataService:notify(player, "Not enough money — you need " .. Util.formatMoney(math.max(0, short)) .. " more.", "error")
 		elseif res ~= "Slow down" then
 			S.PlayerDataService:notify(player, tostring(res), "error")
 		end

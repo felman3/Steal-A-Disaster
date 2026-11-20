@@ -132,16 +132,28 @@ local function effectText(id, snap)
 	return ""
 end
 
+-- shop layout: category headers and the row order inside them
+local SHOP_HEADERS = {
+	{ name = "SpeedHeader", text = "⚡ SPEED", color = Theme.Orange, order = 10 },
+	{ name = "BaseHeader", text = "🏠 BASE & CARRY", color = Theme.Blue, order = 20 },
+	{ name = "IncubatorHeader", text = "🥚 INCUBATOR", color = Theme.Purple, order = 30 },
+}
+local SHOP_ORDER = { Treadmill = 11, Carry = 21, Pedestals = 22, Shield = 23, Pods = 31 }
+
 local function buildShop(screen)
-	local p, body = makePanel(screen, "ShopPanel", "🛒 UPGRADES", Theme.Green)
+	local p, body = makePanel(screen, "ShopPanel", "🛒 SHOP", Theme.Green)
 	local list = Instance.new("UIListLayout")
 	list.Padding = UDim.new(0, 10)
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.Parent = body
+	-- categories: headers sit just before their rows (LayoutOrder)
+	for _, h in ipairs(SHOP_HEADERS) do
+		Theme.label(body, { name = h.name, text = h.text, size = UDim2.new(1, -12, 0, 32), font = Theme.FontDisplay, color = h.color, order = h.order, z = 12, strokeThickness = 2, xAlign = Enum.TextXAlignment.Left })
+	end
 	local rows = {}
 	for i, id in ipairs(Config.UpgradeOrder) do
 		local def = Config.Upgrades[id]
-		local row = Theme.frame(body, { name = id, size = UDim2.new(1, -12, 0, 76), color = Theme.White, corner = 10, order = i, z = 12 })
+		local row = Theme.frame(body, { name = id, size = UDim2.new(1, -12, 0, 76), color = Theme.White, corner = 10, order = SHOP_ORDER[id] or i, z = 12 })
 		Theme.label(row, { name = "Icon", text = UPGRADE_ICON[id] or "⬆", size = UDim2.new(0, 56, 0, 56), position = UDim2.new(0, 10, 0.5, 0), anchor = Vector2.new(0, 0.5), stroke = false, z = 13 })
 		local name = Theme.label(row, { name = "UpgradeName", text = def.name, size = UDim2.new(0.5, 0, 0.44, 0), position = UDim2.new(0, 76, 0.08, 0), xAlign = Enum.TextXAlignment.Left, color = Theme.Ink, stroke = false, z = 13 })
 		local effect = Theme.label(row, { name = "Effect", text = "", size = UDim2.new(0.55, 0, 0.34, 0), position = UDim2.new(0, 76, 0.56, 0), xAlign = Enum.TextXAlignment.Left, color = Color3.fromRGB(90, 90, 110), stroke = false, z = 13 })
@@ -192,11 +204,13 @@ function Panels._buildBoosts(body)
 	local MConfig = require(Shared.Config.MonetizationConfig)
 	local MarketplaceService = game:GetService("MarketplaceService")
 	local RunService = game:GetService("RunService")
-	Theme.label(body, { name = "BoostsHeader", text = "⭐ BOOSTS", size = UDim2.new(1, -12, 0, 34), font = Theme.FontDisplay, color = Theme.Orange, order = 100, z = 12, strokeThickness = 2 })
+	Theme.label(body, { name = "BoostsHeader", text = "💎 GAME PASSES — permanent", size = UDim2.new(1, -12, 0, 32), font = Theme.FontDisplay, color = Theme.Orange, order = 100, z = 12, strokeThickness = 2, xAlign = Enum.TextXAlignment.Left })
+	Theme.label(body, { name = "ProductsHeader", text = "🎁 BOOSTS — one-time", size = UDim2.new(1, -12, 0, 32), font = Theme.FontDisplay, color = Theme.Frenzy, order = 110, z = 12, strokeThickness = 2, xAlign = Enum.TextXAlignment.Left })
 	local rows = {}
 	for j, key in ipairs(MConfig.BoostsOrder) do
 		local item = MConfig.Items[key]
-		local row = Theme.frame(body, { name = "Boost_" .. key, size = UDim2.new(1, -12, 0, 76), color = Theme.White, corner = 10, order = 100 + j, z = 12 })
+		local order = (item.type == "GamePass") and (100 + j) or (110 + j)
+		local row = Theme.frame(body, { name = "Boost_" .. key, size = UDim2.new(1, -12, 0, 76), color = Theme.White, corner = 10, order = order, z = 12 })
 		Theme.label(row, { name = "Icon", text = item.icon, size = UDim2.new(0, 56, 0, 56), position = UDim2.new(0, 10, 0.5, 0), anchor = Vector2.new(0, 0.5), stroke = false, z = 13 })
 		Theme.label(row, { name = "BoostName", text = item.name, size = UDim2.new(0.5, 0, 0.44, 0), position = UDim2.new(0, 76, 0.08, 0), xAlign = Enum.TextXAlignment.Left, color = Theme.Ink, stroke = false, z = 13 })
 		local effect = Theme.label(row, { name = "Effect", text = item.benefit, size = UDim2.new(0.55, 0, 0.34, 0), position = UDim2.new(0, 76, 0.56, 0), xAlign = Enum.TextXAlignment.Left, color = Color3.fromRGB(90, 90, 110), stroke = false, z = 13 })
@@ -229,6 +243,10 @@ function Panels._buildBoosts(body)
 			end
 			if key == "CashPack" and snap and snap.cashPack then
 				r.effect.Text = "+" .. Util.formatMoney(snap.cashPack) .. " now (≈10 min of income)"
+			elseif key == "SpeedBoost" and snap and (snap.boostSpeed or 0) > 0 then
+				r.effect.Text = "Active: x" .. (snap.speedMult or 2) .. " • " .. Util.formatTime(snap.boostSpeed) .. " left (buy to add 15 min)"
+			elseif key == "InstantHatch" and snap and (snap.hatchCredits or 0) > 0 then
+				r.effect.Text = snap.hatchCredits .. " free hatch(es) saved — use on a pod"
 			elseif item.type == "GamePass" and snap and owned then
 				r.effect.Text = item.benefit .. " — active"
 			end

@@ -506,3 +506,50 @@ describe("shop Boosts section (client)", function()
 		noErrors(env2)
 	end)
 end)
+
+describe("shop categories", function()
+	it("groups upgrades and Robux items under headers, and every product has a row", function()
+		local env = Env.new({ mode = "both", verbose = VERBOSE })
+		env.studio = true
+		env.runScript("ServerScriptService.Server.Main")
+		env.advance(0.5)
+		local S = env.G.StealADisaster
+		local player = env.addPlayer("Client")
+		env.advance(1)
+		env.runScript("StarterPlayerScripts.Client.Main")
+		env.advance(1)
+		S.PlayerDataService:markDirty(player)
+		env.advance(0.3)
+		local body = player.PlayerGui.StealADisasterHud.ShopPanel.Body
+		for _, h in ipairs({ "SpeedHeader", "BaseHeader", "IncubatorHeader", "BoostsHeader", "ProductsHeader" }) do
+			expect(body:FindFirstChild(h) ~= nil).toBe(true)
+		end
+		-- each row sits after its header
+		expect(body.Treadmill.LayoutOrder > body.SpeedHeader.LayoutOrder).toBe(true)
+		expect(body.Pods.LayoutOrder > body.IncubatorHeader.LayoutOrder).toBe(true)
+		expect(body.Boost_TurboTreadmill.LayoutOrder < body.ProductsHeader.LayoutOrder).toBe(true)
+		expect(body.Boost_SpeedBoost.LayoutOrder > body.ProductsHeader.LayoutOrder).toBe(true)
+		expect(body.Boost_InstantHatch.Visible).toBe(true)
+		noErrors(env)
+	end)
+
+	it("an unaffordable upgrade says how much money is missing", function()
+		local env = Env.new({ mode = "server", verbose = VERBOSE })
+		env.runScript("ServerScriptService.Server.Main")
+		env.advance(0.5)
+		local S = env.G.StealADisaster
+		local p = env.addPlayer("Broke")
+		env.advance(1)
+		S.PlayerDataService:get(p).money = 10
+		env.G.game:GetService("ReplicatedStorage").Remotes.RequestUpgrade.OnServerEvent:Fire(p, "Treadmill")
+		env.advance(0.1)
+		local found = false
+		for _, r in ipairs(env.M.remoteLog) do
+			if r.remote == "Notify" and r.target == p and type(r.args[1]) == "string" and string.find(r.args[1], "$30 more", 1, true) then
+				found = true
+			end
+		end
+		expect(found).toBe(true)
+		noErrors(env)
+	end)
+end)

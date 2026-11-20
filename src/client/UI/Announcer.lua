@@ -118,6 +118,8 @@ function Announcer.mount(screen)
 	banner.Position = UDim2.new(0.5, 0, 0.2, 0)
 	banner.AnchorPoint = Vector2.new(0.5, 0)
 	banner.Visible = false
+	-- above panels (ZIndex 10+): with Sibling ordering a lower container hides behind an open panel
+	banner.ZIndex = 35
 	banner.Parent = screen
 	local maxW = Instance.new("UISizeConstraint")
 	maxW.MaxSize = Vector2.new(820, 130)
@@ -131,6 +133,8 @@ function Announcer.mount(screen)
 	toastHolder.Size = UDim2.new(0, 420, 0, 180)
 	toastHolder.Position = UDim2.new(0.5, 0, 1, -190)
 	toastHolder.AnchorPoint = Vector2.new(0.5, 1)
+	-- purchase/upgrade feedback must stay visible while the shop is open
+	toastHolder.ZIndex = 40
 	toastHolder.Parent = screen
 	local list = Instance.new("UIListLayout")
 	list.Padding = UDim.new(0, 6)
