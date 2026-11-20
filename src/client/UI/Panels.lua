@@ -42,6 +42,42 @@ local ARCH_ICON = {
 }
 Panels.ARCH_ICON = ARCH_ICON
 
+local okModels, DisasterModels = pcall(function()
+	return require(Shared.Models.DisasterModels)
+end)
+
+-- 3D preview of a disaster inside an index cell (built lazily)
+local function makePreview(cell, disasterId)
+	if not okModels then
+		return nil
+	end
+	local ok, model = pcall(DisasterModels.build, disasterId, nil)
+	if not ok or not model then
+		return nil
+	end
+	local vp = Instance.new("ViewportFrame")
+	vp.Name = "Preview"
+	vp.BackgroundTransparency = 1
+	vp.Size = UDim2.new(1, -8, 0.56, 0)
+	vp.Position = UDim2.new(0, 4, 0.02, 0)
+	vp.Ambient = Color3.fromRGB(190, 190, 200)
+	vp.LightColor = Color3.fromRGB(255, 255, 255)
+	vp.LightDirection = Vector3.new(-1, -1.5, 1)
+	vp.ZIndex = 13
+	vp.Parent = cell
+	model.Parent = vp
+	local cf, size = model:GetBoundingBox()
+	local cam = Instance.new("Camera")
+	cam.FieldOfView = 40
+	local dist = math.max(size.X, size.Y, size.Z) * 1.7 + 2
+	local center = cf.Position
+	-- disasters face -Z, so look at them from the -Z side
+	cam.CFrame = CFrame.lookAt(center + Vector3.new(dist * 0.35, size.Y * 0.2, -dist), center)
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	return vp
+end
+
 local UPGRADE_ICON = { Treadmill = "🏃", Carry = "🎒", Pods = "🥚", Pedestals = "🏛", Shield = "🛡" }
 
 local function makePanel(screen, name, title, color)
@@ -217,6 +253,15 @@ local function buildIndex(screen)
 	local function refresh(snap)
 		local found = 0
 		for id, c in pairs(cells) do
+			if p.Visible and not c.preview then
+				c.preview = makePreview(c.cell, id) or false
+			end
+			if c.preview then
+				local known = snap.index[id] == true
+				c.preview.ImageColor3 = known and Color3.new(1, 1, 1) or Color3.new(0, 0, 0)
+				c.preview.ImageTransparency = known and 0 or 0.25
+				c.icon.Visible = false
+			end
 			if snap.index[id] then
 				found = found + 1
 				c.icon.Text = ARCH_ICON[c.def.archetype] or "🌪"
@@ -235,6 +280,12 @@ local function buildIndex(screen)
 	if State.get() then
 		refresh(State.get())
 	end
+	-- previews are built the first time the panel is opened
+	p:GetPropertyChangedSignal("Visible"):Connect(function()
+		if p.Visible and State.get() then
+			refresh(State.get())
+		end
+	end)
 	return p
 end
 

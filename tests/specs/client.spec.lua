@@ -83,6 +83,12 @@ describe("client HUD", function()
 		expect(cell.DisasterName.Text).toBe("Mini Tornado")
 		expect(screen.IndexPanel.Body.SuburbGrid.DustDevil.DisasterName.Text).toBe("???")
 		expect(screen.IndexPanel.Body.Progress.Text).toContain("1 / 37")
+		-- 3D previews: known = full color, unknown = silhouette
+		env.advance(0.1)
+		local vp = cell:FindFirstChild("Preview")
+		expect(vp ~= nil).toBe(true)
+		expect(vp.ImageColor3.R).toBe(1)
+		expect(screen.IndexPanel.Body.SuburbGrid.DustDevil.Preview.ImageColor3.R).toBe(0)
 		noErrors(env)
 	end)
 
