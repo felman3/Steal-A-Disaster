@@ -109,7 +109,12 @@ Lua 5.4 VM. That's why all source sticks to the Luau ∩ Lua 5.4 subset
 (three.js, headless). It's only useful for layout and silhouettes; it doesn't
 replace a look in Studio.
 
-## Status / not yet verified
+## Status
+Done: the full loop, 13 services, all 9 zones (each with its own builder and
+hero landmark), 37 cores and 37 disasters, 9 guardians, the event cycle, PvP theft,
+persistence, the HUD and panels. 161 automated tests pass.
+
+### Not yet verified
 - **Not yet run in Roblox Studio.** No Studio or Studio MCP was available to the
   build session, so physics feel (treadmill conveyor, knockback), lighting, particle
   looks, GUI scaling on real devices, and DataStore behavior on live servers still need
