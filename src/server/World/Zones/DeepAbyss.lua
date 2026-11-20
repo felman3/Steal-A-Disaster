@@ -202,7 +202,7 @@ local function whaleSkeleton(ctx, parent, zc)
 	local m = Kit.model(parent, "WhaleSkeleton")
 	local spine = {}
 	for i = 0, 15 do
-		local x = -40 + i * 7
+		local x = -42 + i * 7
 		local t = i / 15
 		local y = 9 + 24 * math.sin(math.min(1, t * 1.35) * math.pi * 0.85) * (1 - t * 0.55)
 		table.insert(spine, Vector3.new(x, y, zc))
@@ -216,11 +216,12 @@ local function whaleSkeleton(ctx, parent, zc)
 		Kit.part(m, { name = "Vertebra", shape = "Cylinder", size = Vector3.new(1.6, 5 * taper, 5 * taper), cf = CFrame.new(p), color = Kit.shade(BONE, 0.95), material = Enum.Material.Limestone })
 		Kit.part(m, { name = "SpinalSpike", size = Vector3.new(0.9, 3.2 * taper, 1.4), cf = CFrame.new(p + Vector3.new(0, 2.6 * taper, 0)) * CFrame.Angles(0, 0, -0.35), color = BONE, material = Enum.Material.Limestone })
 	end
-	-- ribs: quarter ellipses down to the seabed on both sides
+	-- ribs: quarter ellipses down to the seabed on both sides. The middle
+	-- ribs have collapsed, leaving the way on to the next zone open.
 	for i = 2, 10 do
 		local top = spine[i]
 		local rz = 6 + top.Y * 0.28
-		for _, side in ipairs({ -1, 1 }) do
+		for _, side in ipairs((math.abs(top.X) >= 12) and { -1, 1 } or {}) do
 			local prev = top
 			for s = 1, 3 do
 				local t = s / 3 * math.pi / 2
@@ -229,6 +230,9 @@ local function whaleSkeleton(ctx, parent, zc)
 				prev = p
 			end
 		end
+	end
+	for _, s in ipairs({ { -6, -9, 0.5 }, { 5, 7, -0.4 } }) do
+		Kit.part(m, { name = "FallenRib", shape = "Cylinder", size = Vector3.new(14, 1.2, 1.2), cf = CFrame.new(s[1], 0.3, zc + s[2]) * CFrame.Angles(0, s[3], 0), color = Kit.shade(BONE, 0.9), material = Enum.Material.Limestone, collide = false })
 	end
 	-- skull: cranium, long rostrum and a lower jaw lying in the sand
 	local head = spine[1]
