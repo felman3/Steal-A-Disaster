@@ -359,11 +359,12 @@ local function buildGate(folder, index, zone, palette)
 	sg.LightInfluence = 0
 	sg.Brightness = 1.3
 	sg.Parent = header
-	Kit.text(sg, { name = "Index", text = "ZONE " .. index, size = UDim2.new(1, 0, 0.18, 0), position = UDim2.new(0, 0, 0.02, 0), color = accent })
-	Kit.text(sg, { name = "ZoneName", text = string.upper(zone.name), size = UDim2.new(1, 0, 0.42, 0), position = UDim2.new(0, 0, 0.18, 0), color = { 255, 255, 255 }, font = Enum.Font.LuckiestGuy })
+	-- the pillars hide the outer 6 studs of each end, so text stays in the middle 70%
+	Kit.text(sg, { name = "Index", text = "ZONE " .. index, size = UDim2.new(0.7, 0, 0.18, 0), position = UDim2.new(0.15, 0, 0.02, 0), color = accent })
+	Kit.text(sg, { name = "ZoneName", text = string.upper(zone.name), size = UDim2.new(0.7, 0, 0.42, 0), position = UDim2.new(0.15, 0, 0.18, 0), color = { 255, 255, 255 }, font = Enum.Font.LuckiestGuy })
 	local req = zone.speedReq > 0 and ("⚡ " .. Util.formatNumber(zone.speedReq) .. " SPEED TO STEAL") or "⚡ NO SPEED NEEDED"
-	Kit.text(sg, { name = "Requirement", text = req, size = UDim2.new(1, 0, 0.2, 0), position = UDim2.new(0, 0, 0.6, 0), color = { 255, 230, 90 } })
-	Kit.text(sg, { name = "Cores", text = rarityLine(zone), size = UDim2.new(1, -20, 0.16, 0), position = UDim2.new(0, 10, 0.82, 0), rich = true })
+	Kit.text(sg, { name = "Requirement", text = req, size = UDim2.new(0.7, 0, 0.2, 0), position = UDim2.new(0.15, 0, 0.6, 0), color = { 255, 230, 90 } })
+	Kit.text(sg, { name = "Cores", text = rarityLine(zone), size = UDim2.new(0.68, 0, 0.16, 0), position = UDim2.new(0.16, 0, 0.82, 0), rich = true })
 	header:SetAttribute("ZoneIndex", index)
 	header:AddTag("ZoneGate")
 	return m
