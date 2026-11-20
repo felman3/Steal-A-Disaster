@@ -1,6 +1,6 @@
 # Overnight progress (session handoff)
 
-_Last updated: after the "pedestal income labels" batch._
+_Last updated: after the multiplayer regression + resolution sweep._
 
 ## 1. Status
 - Branch: `claude/adoring-albattani-tv15ea` (pushed to origin after each batch; never force-pushed).
@@ -45,7 +45,7 @@ _Last updated: after the "pedestal income labels" batch._
 1. **Monetization products** — blocked on user (see 6). When unblocked: create 2 passes + 3 products
    (multipart POST with `imageFile` from `assets/icons`), re-list to read real IDs, put IDs in
    MonetizationConfig, rebuild, sync Studio, test purchases (Studio test purchase dialog), commit.
-2. UI pass, remaining: a full resolution sweep (320–1920) of all panels; guardian/core label overlap at nests.
+2. UI pass, remaining: guardian/core label overlap at nests; panels at 320-wide portrait (game is landscape-only).
 4. Environment, remaining: hub/base polish, zone lighting/atmosphere tweaks. Zone builders in `src/server/World/Zones/*.lua` must keep `tests/specs/zones.spec.lua`
    contract (corridor clear, part budget ≤650/zone, gate signs visible).
 5. Progression, remaining: maybe a daily reward / collection milestones (only if it fits the economy).
@@ -82,7 +82,11 @@ _Last updated: after the "pedestal income labels" batch._
 
 ## 7. Testing status
 - Automated: 217 pass; lint ok; build ok.
+- 2-player Studio regression (StudioTestService): owner travels away with STEAL, thief steals, thief HOME refused
+  while carrying (click + forced remote), owner gets BASE BREACH, HOME back, tags thief, core returns, no dupes.
 - Studio (published place): all 5 Quick Travel buttons, locked-zone refusal (click + forced remote),
   zone travel after unlock, refusal while carrying, camera after travel, shop categories render,
   not-enough-money toast above the shop. Earlier sessions: full loop, PvP 2-player, monetization mock.
+- HUD checked in the device simulator at Galaxy A06 (800x360), iPhone 17 Pro, iPad 10th gen (1180x820) and
+  HD 1080: no overlaps.
 - Not verified: real Robux test purchases (no product ids), real phones, DataStore persistence in Studio.
