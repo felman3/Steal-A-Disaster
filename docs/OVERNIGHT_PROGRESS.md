@@ -1,6 +1,6 @@
 # Overnight progress (session handoff)
 
-_Last updated: after the "phone layout for Quick Travel + Zones panel" batch._
+_Last updated: after the "Disaster Index search/filter/sort" batch._
 
 ## 1. Status
 - Branch: `claude/adoring-albattani-tv15ea` (pushed to origin after each batch; never force-pushed).
@@ -23,6 +23,8 @@ _Last updated: after the "phone layout for Quick Travel + Zones panel" batch._
 - **Phone layout** (Galaxy A06 800x360 in the device simulator): Quick Travel becomes an always-visible 2x3
   grid top-right on small touch screens (the single column overlapped the jump button; the collapse pill was a
   40x16 px tap target). Zones panel text lines widened (6 px → 10 px on the smallest phone).
+- **Disaster Index**: search (matches discovered names only — no spoilers), rarity chips, SHOW ALL/OWNED,
+  SORT ZONE/RARITY/INCOME (within each zone), progress % + bar, ×n owned badges from server data.
 - **Bug fixed**: toasts and announcement banners were drawn behind open panels (ZIndex 1 vs 10).
   Now Toasts 40, Banner 35 (`Announcer.lua`).
 
@@ -35,8 +37,6 @@ _Last updated: after the "phone layout for Quick Travel + Zones panel" batch._
    MonetizationConfig, rebuild, sync Studio, test purchases (Studio test purchase dialog), commit.
 2. UI pass, remaining: world labels (TREADMILL billboard is occluded by the base side
    wall at close range; pedestal labels show base income while HUD shows Double Cash total).
-3. Disaster Index improvements: search, rarity filter, sort, income per disaster, progress
-   (existing index in `Panels.lua` buildIndex — extend, don't rebuild).
 4. Environment: distant background scenery around the route/hub (currently empty sky/void beyond walls),
    hub/base polish. Zone builders in `src/server/World/Zones/*.lua` must keep `tests/specs/zones.spec.lua`
    contract (corridor clear, part budget ≤650/zone, gate signs visible).
@@ -73,7 +73,7 @@ _Last updated: after the "phone layout for Quick Travel + Zones panel" batch._
 - Optional: Game Settings → Security → Enable Studio Access to API Services (real DataStore in Studio).
 
 ## 7. Testing status
-- Automated: 214 pass; lint ok; build ok.
+- Automated: 215 pass; lint ok; build ok.
 - Studio (published place): all 5 Quick Travel buttons, locked-zone refusal (click + forced remote),
   zone travel after unlock, refusal while carrying, camera after travel, shop categories render,
   not-enough-money toast above the shop. Earlier sessions: full loop, PvP 2-player, monetization mock.

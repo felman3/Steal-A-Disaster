@@ -46,6 +46,42 @@ describe("client HUD", function()
 		noErrors(env)
 	end)
 
+	it("index: search only finds discovered names; rarity and owned filters; owned badges", function()
+		local env, S, player = boot()
+		local data = S.PlayerDataService:get(player)
+		data.index.DustDevil = true
+		data.disasters = { { s = 1, d = "DustDevil", z = 1 }, { s = 2, d = "DustDevil", z = 1 } }
+		S.PlayerDataService:markDirty(player)
+		env.advance(0.3)
+		local panel = hud(player).IndexPanel
+		local body = panel.Body
+		local cell = body.SuburbGrid.DustDevil
+		expect(cell.Owned.Text).toBe("×2")
+		expect(body.Progress.Text).toContain("Discovered 1 / ")
+		-- searching an undiscovered disaster name finds nothing (no spoilers)
+		body.Toolbar.Search.Text = "black hole"
+		env.advance(0.1)
+		expect(body.VoidRealmGrid.Visible).toBe(false)
+		body.Toolbar.Search.Text = "dust"
+		env.advance(0.1)
+		expect(cell.Visible).toBe(true)
+		expect(body.SuburbGrid.Visible).toBe(true)
+		expect(body.OvergrowthGrid.Visible).toBe(false)
+		body.Toolbar.Search.Text = ""
+		body.Toolbar.Chip_Mythic.Activated:Fire()
+		env.advance(0.1)
+		expect(cell.Visible).toBe(false)
+		body.Toolbar.Chip_All.Activated:Fire()
+		body.Toolbar.OwnedOnly.Activated:Fire()
+		env.advance(0.1)
+		expect(cell.Visible).toBe(true)
+		expect(body.OvergrowthGrid.Visible).toBe(false)
+		body.Toolbar.Sort.Activated:Fire()
+		env.advance(0.1)
+		expect(body.Toolbar.Sort.Label.Text).toBe("SORT: RARITY")
+		noErrors(env)
+	end)
+
 	it("toasts and banners draw above open panels", function()
 		local env, S, player = boot()
 		local screen = hud(player)

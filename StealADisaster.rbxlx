@@ -12797,7 +12797,62 @@ local function buildIndex(screen)
 	list.Padding = UDim.new(0, 8)
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.Parent = body
-	local progress = Theme.label(body, { name = "Progress", text = "", size = UDim2.new(1, -12, 0, 30), color = Theme.Ink, stroke = false, order = 0, z = 12 })
+	local progress = Theme.label(body, { name = "Progress", text = "", size = UDim2.new(1, -12, 0, 26), color = Theme.Ink, stroke = false, order = -3, z = 12 })
+	local barBg = Theme.frame(body, { name = "ProgressBar", size = UDim2.new(1, -12, 0, 12), color = Color3.fromRGB(60, 56, 80), corner = 6, order = -2, z = 12 })
+	local bar = Theme.frame(barBg, { name = "Fill", size = UDim2.new(0, 0, 1, 0), color = Theme.Purple, corner = 6, z = 13 })
+	-- toolbar: search, rarity chips, owned-only toggle, sort
+	local tools = Instance.new("Frame")
+	tools.Name = "Toolbar"
+	tools.BackgroundTransparency = 1
+	tools.Size = UDim2.new(1, -12, 0, 84)
+	tools.LayoutOrder = -1
+	tools.Parent = body
+	local search = Instance.new("TextBox")
+	search.Name = "Search"
+	search.PlaceholderText = "🔍 Search discovered disasters"
+	search.Text = ""
+	search.ClearTextOnFocus = false
+	search.Font = Theme.FontBold
+	search.TextScaled = true
+	search.TextColor3 = Theme.Ink
+	search.PlaceholderColor3 = Color3.fromRGB(130, 128, 150)
+	search.BackgroundColor3 = Theme.White
+	search.Size = UDim2.new(1, -250, 0, 36)
+	search.ZIndex = 13
+	search.Parent = tools
+	Theme.corner(search, 8)
+	Theme.outline(search, 2)
+	local filter = { rarity = nil, owned = false, sort = 1, text = "" }
+	local SORTS = { "ZONE", "RARITY", "INCOME" }
+	local applyFilters
+	local ownedBtn = Theme.button(tools, { name = "OwnedOnly", text = "SHOW: ALL", color = Theme.Blue, size = UDim2.new(0, 116, 0, 36), position = UDim2.new(1, -124, 0, 0), z = 13, onClick = function(b)
+		filter.owned = not filter.owned
+		Theme.setButtonText(b, filter.owned and "SHOW: OWNED" or "SHOW: ALL")
+		applyFilters()
+	end })
+	local sortBtn = Theme.button(tools, { name = "Sort", text = "SORT: ZONE", color = Theme.Orange, size = UDim2.new(0, 116, 0, 36), position = UDim2.new(1, -244, 0, 0), z = 13, onClick = function(b)
+		filter.sort = filter.sort % #SORTS + 1
+		Theme.setButtonText(b, "SORT: " .. SORTS[filter.sort])
+		applyFilters()
+	end })
+	local chips = {}
+	local CHIP_LIST = { "All", "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Chaos" }
+	for ci, r in ipairs(CHIP_LIST) do
+		local col = (r == "All") and Theme.Ink or Theme.rgb(Config.Rarities[r].color)
+		chips[r] = Theme.button(tools, { name = "Chip_" .. r, text = (r == "All") and "ALL" or string.upper(string.sub(r, 1, 4)), color = col, size = UDim2.new(1 / #CHIP_LIST, -6, 0, 34), position = UDim2.new((ci - 1) / #CHIP_LIST, 3, 0, 46), z = 13, onClick = function()
+			filter.rarity = (r ~= "All") and r or nil
+			for name, b in pairs(chips) do
+				b.BackgroundTransparency = ((filter.rarity or "All") == name) and 0 or 0.55
+			end
+			applyFilters()
+		end })
+		chips[r].BackgroundTransparency = (r == "All") and 0 or 0.55
+	end
+	search:GetPropertyChangedSignal("Text"):Connect(function()
+		filter.text = string.lower(search.Text)
+		applyFilters()
+	end)
+	local groups = {}
 	local cells = {}
 	local order = 1
 	local zones = {}
@@ -12805,7 +12860,7 @@ local function buildIndex(screen)
 		table.insert(zones, z)
 	end
 	for _, zone in ipairs(zones) do
-		Theme.label(body, { name = zone.id .. "Header", text = string.upper(zone.name) .. "  •  ⚡ " .. Util.formatNumber(zone.speedReq), size = UDim2.new(1, -12, 0, 28), color = Theme.White, order = order, z = 12, xAlign = Enum.TextXAlignment.Left })
+		local header = Theme.label(body, { name = zone.id .. "Header", text = string.upper(zone.name) .. "  •  ⚡ " .. Util.formatNumber(zone.speedReq), size = UDim2.new(1, -12, 0, 28), color = Theme.White, order = order, z = 12, xAlign = Enum.TextXAlignment.Left })
 		order = order + 1
 		local grid = Instance.new("Frame")
 		grid.Name = zone.id .. "Grid"
@@ -12819,6 +12874,8 @@ local function buildIndex(screen)
 		gl.CellPadding = UDim2.new(0, 8, 0, 8)
 		gl.SortOrder = Enum.SortOrder.LayoutOrder
 		gl.Parent = grid
+		local group = { header = header, grid = grid, ids = {} }
+		table.insert(groups, group)
 		for ci, coreId in ipairs(zone.cores) do
 			local core = Config.Cores[coreId]
 			local d = Config.Disasters[core.disaster]
@@ -12830,12 +12887,13 @@ local function buildIndex(screen)
 			local icon = Theme.label(cell, { name = "Icon", text = "❔", size = UDim2.new(1, 0, 0.5, 0), position = UDim2.new(0, 0, 0.06, 0), stroke = false, z = 13 })
 			local nm = Theme.label(cell, { name = "DisasterName", text = "???", size = UDim2.new(1, -8, 0.22, 0), position = UDim2.new(0, 4, 0.56, 0), z = 13, strokeThickness = 1.5 })
 			local info = Theme.label(cell, { name = "Info", text = d.rarity, size = UDim2.new(1, -8, 0.18, 0), position = UDim2.new(0, 4, 0.79, 0), color = Theme.rgb(rarity.color), z = 13, strokeThickness = 1.5 })
-			cells[core.disaster] = { cell = cell, icon = icon, name = nm, info = info, def = d }
+			cells[core.disaster] = { cell = cell, icon = icon, name = nm, info = info, def = d, base = ci }
+			table.insert(group.ids, core.disaster)
 		end
 	end
 	-- the event-only Chaos Storm
 	do
-		Theme.label(body, { name = "ChaosHeader", text = "CHAOS FRENZY EXCLUSIVE", size = UDim2.new(1, -12, 0, 28), color = Theme.Frenzy, order = order, z = 12, xAlign = Enum.TextXAlignment.Left })
+		local header = Theme.label(body, { name = "ChaosHeader", text = "CHAOS FRENZY EXCLUSIVE", size = UDim2.new(1, -12, 0, 28), color = Theme.Frenzy, order = order, z = 12, xAlign = Enum.TextXAlignment.Left })
 		order = order + 1
 		local grid = Instance.new("Frame")
 		grid.Name = "ChaosGrid"
@@ -12851,7 +12909,53 @@ local function buildIndex(screen)
 		local icon = Theme.label(cell, { name = "Icon", text = "❔", size = UDim2.new(1, 0, 0.5, 0), position = UDim2.new(0, 0, 0.06, 0), stroke = false, z = 13 })
 		local nm = Theme.label(cell, { name = "DisasterName", text = "???", size = UDim2.new(1, -8, 0.22, 0), position = UDim2.new(0, 4, 0.56, 0), z = 13, strokeThickness = 1.5 })
 		local info = Theme.label(cell, { name = "Info", text = "Chaos", size = UDim2.new(1, -8, 0.18, 0), position = UDim2.new(0, 4, 0.79, 0), color = Theme.Frenzy, z = 13, strokeThickness = 1.5 })
-		cells.ChaosStorm = { cell = cell, icon = icon, name = nm, info = info, def = d }
+		cells.ChaosStorm = { cell = cell, icon = icon, name = nm, info = info, def = d, base = 1 }
+		table.insert(groups, { header = header, grid = grid, ids = { "ChaosStorm" } })
+	end
+	-- owned-count badge on every cell (from the server snapshot)
+	for _, c in pairs(cells) do
+		c.badge = Theme.label(c.cell, { name = "Owned", text = "", size = UDim2.new(0.5, 0, 0.18, 0), position = UDim2.new(0.5, -4, 0, 4), xAlign = Enum.TextXAlignment.Right, color = Theme.Money, z = 14, strokeThickness = 1.5 })
+	end
+	local lastSnap = nil
+	applyFilters = function()
+		local snap = lastSnap
+		if not snap then
+			return
+		end
+		local owned = {}
+		for _, e in ipairs(snap.disasters or {}) do
+			owned[e.d] = (owned[e.d] or 0) + 1
+		end
+		for _, g in ipairs(groups) do
+			local any = false
+			for _, id in ipairs(g.ids) do
+				local c = cells[id]
+				local known = snap.index[id] == true
+				local show = true
+				if filter.rarity and c.def.rarity ~= filter.rarity then
+					show = false
+				end
+				if filter.owned and not owned[id] then
+					show = false
+				end
+				-- search only matches discovered names, so it never reveals secrets
+				if filter.text ~= "" and (not known or not string.find(string.lower(c.def.name), filter.text, 1, true)) then
+					show = false
+				end
+				c.cell.Visible = show
+				any = any or show
+				c.badge.Text = owned[id] and ("×" .. owned[id]) or ""
+				if filter.sort == 2 then
+					c.cell.LayoutOrder = Config.Rarities[c.def.rarity].rank * 10 + c.base
+				elseif filter.sort == 3 then
+					c.cell.LayoutOrder = -math.floor(EconomyLogic.incomeFor({ d = id, z = 1 }) * 10)
+				else
+					c.cell.LayoutOrder = c.base
+				end
+			end
+			g.header.Visible = any
+			g.grid.Visible = any
+		end
 	end
 	local total = 0
 	for _ in pairs(cells) do
@@ -12881,7 +12985,10 @@ local function buildIndex(screen)
 				c.info.Text = c.def.rarity
 			end
 		end
-		progress.Text = "Discovered " .. found .. " / " .. total
+		progress.Text = "Discovered " .. found .. " / " .. total .. "  (" .. math.floor(found / total * 100 + 0.5) .. "%)"
+		bar.Size = UDim2.new(found / total, 0, 1, 0)
+		lastSnap = snap
+		applyFilters()
 	end
 	State.Changed:Connect(refresh)
 	if State.get() then
