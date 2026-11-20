@@ -146,9 +146,9 @@ return function(ctx)
 	for i = 0, 15 do
 		local a = i / 16 * math.pi * 2
 		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-		-- skip the segment where the road arrives (dir.z < -0.8) to keep the escape open
-		if dir.Z > -0.75 then
-			local p = nest + dir * ringR
+		local p = nest + dir * ringR
+		-- leave gaps where the road arrives and where the route continues to the next zone
+		if dir.Z > -0.75 and not (dir.Z > 0 and math.abs(p.X) < 18) then
 			Kit.part(f, { name = "Hedge", size = Vector3.new(11, 5, 3.2), cf = CFrame.lookAt(Vector3.new(p.X, 2.5, p.Z), Vector3.new(nest.X, 2.5, nest.Z)), color = { 60, 130, 55 }, material = Enum.Material.Grass })
 		end
 	end
@@ -169,7 +169,10 @@ return function(ctx)
 	end
 	-- back tree line
 	for i = 0, 8 do
-		ctx.tree(f, Vector3.new(-64 + i * 16 + rng(-3, 3), 0, z1 - 5 + rng(-2, 2)), 1.2 + rng(0, 0.4))
+		local x = -64 + i * 16 + rng(-3, 3)
+		if math.abs(x) > 24 then -- keep the route to the next zone open
+			ctx.tree(f, Vector3.new(x, 0, z1 - 5 + rng(-2, 2)), 1.2 + rng(0, 0.4))
+		end
 	end
 	-- side tree lines along the boundaries
 	for i = 0, 6 do

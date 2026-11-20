@@ -221,7 +221,7 @@ local function whaleSkeleton(ctx, parent, zc)
 	for i = 2, 10 do
 		local top = spine[i]
 		local rz = 6 + top.Y * 0.28
-		for _, side in ipairs((math.abs(top.X) >= 12) and { -1, 1 } or {}) do
+		for _, side in ipairs((math.abs(top.X) >= 17) and { -1, 1 } or {}) do
 			local prev = top
 			for s = 1, 3 do
 				local t = s / 3 * math.pi / 2

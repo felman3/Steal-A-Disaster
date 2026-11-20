@@ -34,6 +34,8 @@ guardian. **Do not build those.**
    gaps outside the corridor, but the corridor and nest must be solid).
 2. **Corridor is clear:** no collidable part may intrude into `abs(x) <= 13`, between
    `z0` and the nest, from y = 0.8 to y = 12. Decorative non-colliding parts are OK.
+2b. **Exit path is clear:** the same corridor (`abs(x) <= 13`) from the nest's
+   clear radius to `z1` (the walk on to the next zone).
 3. **Nest is clear:** no collidable part above y = 0.8 within `nestRadius + 14`
    of the nest center (the guardian patrols and players dodge there).
 4. **Stay in bounds:** every part's center satisfies `abs(x) <= 80` and

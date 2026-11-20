@@ -90,6 +90,10 @@ describe("zone builders", function()
 						if hi.Y > 0.8 and lo.Y < 12 and lo.X < 13 and hi.X > -13 and hi.Z > z0 and lo.Z < nest.Z then
 							problem("blocks corridor: " .. p:GetFullName() .. " " .. tostring(lo) .. " .. " .. tostring(hi))
 						end
+						-- exit path: nest -> next zone's gate must stay open too
+						if i < #Config.Zones and hi.Y > 0.8 and lo.Y < 12 and lo.X < 13 and hi.X > -13 and hi.Z > nest.Z + nestR and lo.Z < z1 + 2 then
+							problem("blocks exit path: " .. p:GetFullName() .. " " .. tostring(lo) .. " .. " .. tostring(hi))
+						end
 						-- nest
 						if hi.Y > 0.8 then
 							local cx = math.max(lo.X, math.min(nest.X, hi.X))
