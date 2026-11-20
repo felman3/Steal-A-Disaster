@@ -32,6 +32,7 @@ end
 local GuardianService = { Name = "GuardianService" }
 
 local G = Config.Guardian
+local ACTIVE_RANGE = 320
 local S
 local guardians = {} -- [zoneIndex] = g
 
@@ -261,9 +262,35 @@ function GuardianService:Start()
 		self:_setState(g, (i % 2 == 0) and "Sleep" or "Patrol")
 		g.timer = g.timer * (0.4 + (i % 3) * 0.3)
 	end
+	-- ~30 Hz, and only zones with a player nearby (saves replication bandwidth)
+	local acc = 0
+	local activeCheck = 0
+	local active = {}
 	RunService.Heartbeat:Connect(function(dt)
-		for _, g in pairs(guardians) do
-			self:_step(g, math.min(dt, 0.1))
+		acc = acc + dt
+		activeCheck = activeCheck - dt
+		if acc < 1 / 30 then
+			return
+		end
+		local step = math.min(acc, 0.1)
+		acc = 0
+		if activeCheck <= 0 then
+			activeCheck = 0.5
+			for i, g in pairs(guardians) do
+				active[i] = false
+				for _, p in ipairs(Players:GetPlayers()) do
+					local hrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+					if hrp and (flat(hrp.Position) - flat(g.nest)).Magnitude < ACTIVE_RANGE then
+						active[i] = true
+						break
+					end
+				end
+			end
+		end
+		for i, g in pairs(guardians) do
+			if active[i] or g.state == "Chase" or g.state == "Return" then
+				self:_step(g, step)
+			end
 		end
 	end)
 end

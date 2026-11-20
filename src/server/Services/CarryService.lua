@@ -297,19 +297,29 @@ function CarryService:Start()
 		self:dropAll(player, "left")
 		carriers[player] = nil
 	end)
-	Players.PlayerAdded:Connect(function(player)
+	local function hookCharacter(player, char)
+		local hum = char:WaitForChild("Humanoid", 10)
+		if hum then
+			hum.Died:Connect(function()
+				self:dropAll(player, "died")
+			end)
+		end
+	end
+	local function hookPlayer(player)
 		player.CharacterRemoving:Connect(function()
 			self:dropAll(player, "died")
 		end)
 		player.CharacterAdded:Connect(function(char)
-			local hum = char:WaitForChild("Humanoid", 10)
-			if hum then
-				hum.Died:Connect(function()
-					self:dropAll(player, "died")
-				end)
-			end
+			hookCharacter(player, char)
 		end)
-	end)
+		if player.Character then
+			task.spawn(hookCharacter, player, player.Character)
+		end
+	end
+	Players.PlayerAdded:Connect(hookPlayer)
+	for _, p in ipairs(Players:GetPlayers()) do
+		hookPlayer(p)
+	end
 end
 
 return CarryService

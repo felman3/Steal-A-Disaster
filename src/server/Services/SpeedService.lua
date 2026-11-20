@@ -82,13 +82,17 @@ function SpeedService:Start()
 	S.PlayerDataService.Loaded:Connect(function(player)
 		self:refreshWalkSpeed(player)
 	end)
-	Players.PlayerAdded:Connect(function(player)
+	local function hookPlayer(player)
 		player.CharacterAdded:Connect(function()
 			task.defer(function()
 				self:refreshWalkSpeed(player)
 			end)
 		end)
-	end)
+	end
+	Players.PlayerAdded:Connect(hookPlayer)
+	for _, p in ipairs(Players:GetPlayers()) do
+		hookPlayer(p)
+	end
 
 	local reassert = 0
 	RunService.Heartbeat:Connect(function(dt)
