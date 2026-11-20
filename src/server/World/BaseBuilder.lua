@@ -102,6 +102,9 @@ local function buildTreadmill(model, slotIndex, cf)
 	sg.Parent = screen
 	Kit.text(sg, { name = "Title", text = "TREADMILL", size = UDim2.new(1, 0, 0.35, 0), color = TRIM, font = Enum.Font.LuckiestGuy })
 	Kit.text(sg, { name = "Gain", text = "+5 SPEED / STEP", size = UDim2.new(1, 0, 0.6, 0), position = UDim2.new(0, 0, 0.38, 0), color = { 255, 255, 255 } })
+	-- the screen faces the runner, so a floating label makes the treadmill easy to spot from the base entrance
+	local tag = Kit.billboard(console, { name = "TreadmillLabel", size = UDim2.new(12, 0, 3, 0), offset = Vector3.new(0, 4.5, 0), maxDistance = 90 })
+	Kit.text(tag, { name = "Text", text = "🏃 TREADMILL", color = TRIM, font = Enum.Font.LuckiestGuy })
 	-- conveyor: the belt pushes toward local -X; running toward the console keeps you in place
 	belt.AssemblyLinearVelocity = rot:VectorToWorldSpace(Vector3.new(-Config.Speed.BeltSpeed, 0, 0))
 	return { model = m, belt = belt, frame = frame, gainLabel = sg:FindFirstChild("Gain") }
@@ -113,7 +116,8 @@ local function buildTerminal(model, pos, rot, title, color, icon)
 	local pad = Kit.part(m, { name = "Pad", size = Vector3.new(6, 0.4, 6), cf = cf * CFrame.new(0, 0.2, 0), color = color, material = Enum.Material.Neon, transparency = 0.3 })
 	Kit.part(m, { name = "Stand", size = Vector3.new(1.6, 4.2, 2.6), cf = cf * CFrame.new(-1.8, 2.3, 0), color = DARK, material = Enum.Material.Metal })
 	local screen = Kit.part(m, { name = "Screen", size = Vector3.new(0.3, 2.2, 3.4), cf = cf * CFrame.new(-1.0, 4.4, 0) * CFrame.Angles(0, 0, -0.3), color = color, material = Enum.Material.Neon })
-	local bb = Kit.billboard(screen, { name = "Label", size = UDim2.new(0, 160, 0, 50), offset = Vector3.new(0, 2.8, 0), maxDistance = 70 })
+	-- sized in studs (not pixels) so the two terminal labels, 14 studs apart, never overlap at a distance
+	local bb = Kit.billboard(screen, { name = "Label", size = UDim2.new(10, 0, 3, 0), offset = Vector3.new(0, 2.8, 0), maxDistance = 70 })
 	Kit.text(bb, { name = "Text", text = icon .. " " .. title, color = { 255, 255, 255 }, font = Enum.Font.LuckiestGuy })
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ObjectText = title
