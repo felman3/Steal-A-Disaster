@@ -20,6 +20,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config.GameConfig)
 local SpeedLogic = require(Shared.Logic.SpeedLogic)
 local Kit = require(Shared.Models.Kit)
+local Remotes = require(Shared.Remotes)
 
 local okModels, GuardianModels = pcall(function()
 	return require(Shared.Models.GuardianModels)
@@ -164,7 +165,10 @@ function GuardianService:_tag(g, player)
 		if away.Magnitude < 0.1 then
 			away = Vector3.new(0, 0, -1)
 		end
-		hrp.AssemblyLinearVelocity = away.Unit * G.KnockbackForce + Vector3.new(0, 45, 0)
+		local vel = away.Unit * G.KnockbackForce + Vector3.new(0, 45, 0)
+		hrp.AssemblyLinearVelocity = vel
+		-- the client owns its character's physics, so it applies the knockback too
+		Remotes.get("Effect"):FireClient(player, "knockback", vel)
 	end
 	g.tagCooldown = G.TagCooldown
 	self:_setState(g, "Return")

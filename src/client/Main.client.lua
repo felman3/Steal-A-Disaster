@@ -78,6 +78,22 @@ workspace.DescendantAdded:Connect(function(d)
 	end
 end)
 
+-- server-requested effects on our own character (we own its physics)
+Remotes.get("Effect").OnClientEvent:Connect(function(kind, value)
+	local char = player.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if not hrp then
+		return
+	end
+	if kind == "knockback" and typeof(value) == "Vector3" and value.Magnitude < 300 then
+		hrp.AssemblyLinearVelocity = value
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum:ChangeState(Enum.HumanoidStateType.Freefall)
+		end
+	end
+end)
+
 -- keyboard shortcuts
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then

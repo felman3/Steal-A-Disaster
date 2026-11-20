@@ -82,6 +82,7 @@ function CarryService:resetTracking(player)
 	local st = carriers[player]
 	if st then
 		st.lastPos = nil
+		st.budget = nil
 	end
 end
 
@@ -251,7 +252,14 @@ function CarryService:_tick(dt)
 			else
 				local pos = hrp.Position
 				local maxWalk = S.SpeedService:maxWalkFor(player)
-				if st.lastPos and CarryLogic.isTeleport(pos.X - st.lastPos.X, pos.Z - st.lastPos.Z, dt, maxWalk) then
+				local teleported = false
+				if st.lastPos then
+					local dx, dz = pos.X - st.lastPos.X, pos.Z - st.lastPos.Z
+					st.budget, teleported = CarryLogic.spendBudget(st.budget or CarryLogic.newBudget(maxWalk), math.sqrt(dx * dx + dz * dz), dt, maxWalk)
+				else
+					st.budget = CarryLogic.newBudget(maxWalk)
+				end
+				if teleported then
 					warn("[Carry] teleport suspected for " .. player.Name)
 					self:dropAll(player, "teleport")
 				else

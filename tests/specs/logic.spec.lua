@@ -133,6 +133,25 @@ describe("CarryLogic", function()
 		expect(CarryLogic.canCarryMore(3, 4)).toBe(true)
 		expect(CarryLogic.capacityForLevel(99)).toBe(4)
 	end)
+	it("movement budget tolerates lag bursts but not teleports", function()
+		local maxWalk = 30
+		local b = CarryLogic.newBudget(maxWalk)
+		local tp
+		-- 1 s frozen (no movement), then a 1 s catch-up burst in one frame
+		for _ = 1, 60 do
+			b, tp = CarryLogic.spendBudget(b, 0, 1 / 60, maxWalk)
+		end
+		b, tp = CarryLogic.spendBudget(b, 30, 1 / 60, maxWalk)
+		expect(tp).toBe(false)
+		-- steady walking forever is fine
+		for _ = 1, 600 do
+			b, tp = CarryLogic.spendBudget(b, maxWalk / 60, 1 / 60, maxWalk)
+			expect(tp).toBe(false)
+		end
+		-- teleporting 200 studs is not
+		b, tp = CarryLogic.spendBudget(b, 200, 1 / 60, maxWalk)
+		expect(tp).toBe(true)
+	end)
 	it("flags teleports but not normal movement", function()
 		expect(CarryLogic.isTeleport(1, 1, 1 / 30, 30)).toBe(false)
 		expect(CarryLogic.isTeleport(200, 0, 1 / 30, 30)).toBe(true)

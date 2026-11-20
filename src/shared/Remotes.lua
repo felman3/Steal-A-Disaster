@@ -15,6 +15,7 @@ Remotes.Events = {
 	"Notify", -- (text, kind) small toast
 	"Announce", -- (payload) big centered banner: zone entry, events, catches
 	"OpenPanel", -- (panelName) world kiosk opened a UI panel
+	"Effect", -- (kind, ...) client-side effects, e.g. ("knockback", velocity)
 	-- client -> server
 	"RequestUpgrade", -- (upgradeId)
 	"RequestShield", -- ()

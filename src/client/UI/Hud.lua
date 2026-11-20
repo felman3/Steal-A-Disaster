@@ -36,7 +36,7 @@ function Hud.mount(screen)
 	local income = Theme.label(moneyBox, { name = "Income", text = "+$0/s", size = UDim2.new(1, 0, 0.32, 0), position = UDim2.new(0, 0, 0.66, 0), color = Theme.White, strokeThickness = 2.5 })
 
 	-- event pill -------------------------------------------------------------
-	local pill = Theme.frame(screen, { name = "EventPill", size = UDim2.new(0, 230, 0, 46), position = UDim2.new(1, -12, 0, 10), anchor = Vector2.new(1, 0), color = Color3.fromRGB(60, 40, 90), corner = 12 })
+	local pill = Theme.frame(screen, { name = "EventPill", size = UDim2.new(0, 250, 0, 40), position = UDim2.new(0.5, 0, 0, 96), anchor = Vector2.new(0.5, 0), color = Color3.fromRGB(60, 40, 90), corner = 12 })
 	local pillText = Theme.label(pill, { name = "Text", text = "🌪 FRENZY IN 5:00", size = UDim2.new(1, -16, 1, -10), position = UDim2.new(0, 8, 0, 5) })
 
 	-- speed bar ------------------------------------------------------------------

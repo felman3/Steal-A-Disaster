@@ -49,4 +49,25 @@ function CarryLogic.isTeleport(dx, dz, dt, maxWalk)
 	return dist > CarryLogic.maxTravel(dt, maxWalk)
 end
 
+--[[
+	Movement budget for carriers. Character positions replicate in bursts, so a
+	per-frame distance check would flag laggy players. Instead every frame adds
+	allowance (maxWalk * dt * factor) up to a cap and every frame's movement
+	spends it. A real teleport overdraws the budget; lag bursts don't.
+]]
+function CarryLogic.newBudget(maxWalk)
+	return CarryLogic.budgetCap(maxWalk)
+end
+
+function CarryLogic.budgetCap(maxWalk)
+	return maxWalk * 2.5 + 15
+end
+
+-- returns newBudget, isTeleport
+function CarryLogic.spendBudget(budget, dist, dt, maxWalk)
+	local cap = CarryLogic.budgetCap(maxWalk)
+	budget = math.min(cap, budget + maxWalk * math.min(dt, 1) * C.TeleportFactor) - dist
+	return budget, budget < -C.TeleportSlack
+end
+
 return CarryLogic
