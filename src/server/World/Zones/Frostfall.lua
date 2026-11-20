@@ -24,6 +24,8 @@ local PINE_LIGHT = { 52, 98, 70 }
 local BARK = { 88, 64, 50 }
 local COLD = { 120, 214, 255 }
 local AURORA = { { 110, 255, 200 }, { 130, 190, 255 }, { 180, 140, 255 }, { 100, 240, 230 } }
+-- the Ice Cathedral gateway stands right in front of the Magma Basin gate; lifted so its sign reads through it
+local GATEWAY_LIFT = 8
 
 -- cylinder between two points (Roblox cylinders run along local X)
 local function rod(Kit, parent, a, b, d, o)
@@ -201,6 +203,10 @@ local function cathedral(ctx, parent, zc)
 		icicles(ctx, m, Vector3.new(side * 30, 0, front - 0.6), Vector3.new(side * 60, 0, front - 0.6), 30, 5, 6)
 	end
 	-- the gateway: header block, pointed arch ribs and the rose window
+	local beforeGateway = {}
+	for _, c in ipairs(m:GetChildren()) do
+		beforeGateway[c] = true
+	end
 	Kit.part(m, { name = "Header", size = Vector3.new(28.5, 30, depth - 4), cf = CFrame.new(0, 37, zc), color = GLACIER, material = Enum.Material.Glacier })
 	Kit.part(m, { name = "HeaderSnow", size = Vector3.new(29, 1.4, depth - 3.4), cf = CFrame.new(0, 52.6, zc), color = SNOW, material = Enum.Material.Snow })
 	peak(Kit, m, CFrame.new(0, 53, zc), 28, depth - 4, 12, { name = "Gable", color = GLACIER_DEEP, material = Enum.Material.Glacier }, 2)
@@ -215,6 +221,12 @@ local function cathedral(ctx, parent, zc)
 		Kit.part(m, { name = "RoseTracery", size = Vector3.new(0.7, 13, 0.4), cf = CFrame.new(0, 37, front - 1.9) * CFrame.Angles(0, 0, i * math.pi / 3), color = SNOW, material = Enum.Material.Ice, collide = false })
 	end
 	icicles(ctx, m, Vector3.new(-12.5, 0, front + 0.5), Vector3.new(12.5, 0, front + 0.5), 22, 7, 5)
+	-- raise the gateway so the Magma Basin gate sign right behind it stays readable through the arch
+	for _, c in ipairs(m:GetChildren()) do
+		if not beforeGateway[c] and c:IsA("BasePart") then
+			c.CFrame = c.CFrame + Vector3.new(0, GATEWAY_LIFT, 0)
+		end
+	end
 	return m
 end
 

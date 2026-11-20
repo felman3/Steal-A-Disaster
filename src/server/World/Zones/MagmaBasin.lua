@@ -231,7 +231,8 @@ local function volcano(ctx, parent, zc)
 	local depth = 30
 	local front = zc - depth / 2
 	local tube = 14 -- half-width of the lava tube (the route runs through it)
-	local tubeH = 16
+	-- as tall as the next zone's gate sign, so the sign stays readable through the tube
+	local tubeH = 30
 	local k = 70 / 75 -- flank slope
 	local rimY = k * (75 - tube)
 	-- flanks: wedges rising from the side walls to the crater rim

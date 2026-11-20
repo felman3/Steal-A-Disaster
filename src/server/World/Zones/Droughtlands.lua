@@ -23,6 +23,9 @@ local BONE = { 236, 226, 200 }
 local BONE_DARK = { 196, 182, 154 }
 local CACTUS = { 88, 132, 74 }
 local DEADWOOD = { 128, 106, 88 }
+-- the Skull Arch stands right in front of the Frostfall gate; everything above its mouth is lifted
+-- so the gate sign reads through the mouth from far away
+local MOUTH_LIFT = 10
 local HEAT = { 255, 130, 40 }
 local BANDS = { { 196, 112, 74 }, { 226, 164, 108 }, { 178, 96, 66 }, { 236, 196, 146 }, { 206, 134, 88 } }
 
@@ -233,7 +236,7 @@ local function skullArch(ctx, parent, zc)
 	local m = Kit.model(parent, "SkullArch")
 	local front = zc - 8
 	for side = -1, 1, 2 do
-		for i = 0, 2 do
+		for i = 0, 4 do
 			Kit.part(m, { name = "ArchPillar", size = Vector3.new(14 - i * 0.6, 6.2, 16 - i * 0.6), cf = CFrame.new(side * 21.5, 3 + i * 6, zc) * CFrame.Angles(0, rng(-0.03, 0.03), 0), color = BANDS[(i + 1) % #BANDS + 1], material = Enum.Material.Sandstone })
 		end
 		Kit.part(m, { name = "Rubble", size = Vector3.new(5, 3, 4), cf = CFrame.new(side * 30, 1.2, zc - 6) * CFrame.Angles(0.2, 0.5, 0.1), color = BANDS[2], material = Enum.Material.Sandstone })
@@ -273,6 +276,11 @@ local function skullArch(ctx, parent, zc)
 	-- weathering cracks across the bone
 	Kit.part(m, { name = "BoneCrack", size = Vector3.new(0.4, 9, 0.3), cf = CFrame.new(-2, 47, front - 0.1) * CFrame.Angles(0, 0, 0.4), color = { 120, 100, 80 }, material = Enum.Material.Slate, collide = false })
 	Kit.part(m, { name = "BoneCrack", size = Vector3.new(0.4, 6, 0.3), cf = CFrame.new(3, 33, zc - 7.1) * CFrame.Angles(0, 0, -0.5), color = { 120, 100, 80 }, material = Enum.Material.Slate, collide = false })
+	for _, c in ipairs(m:GetChildren()) do
+		if c:IsA("BasePart") and c.Name ~= "ArchPillar" and c.Name ~= "Rubble" then
+			c.CFrame = c.CFrame + Vector3.new(0, MOUTH_LIFT, 0)
+		end
+	end
 	return m
 end
 

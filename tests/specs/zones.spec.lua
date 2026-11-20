@@ -141,4 +141,66 @@ describe("zone builders", function()
 			expect(refs.zones[i].palette ~= nil).toBe(true)
 		end)
 	end
+
+	-- Found in Studio: exit landmarks (skull arch, ice cathedral, volcano tube) hid the next
+	-- zone's gate sign until the player was right under it.
+	-- Segment vs oriented box (slab test in the part's local space); exact for Ball parts.
+	local function segmentHitsPart(a, b, p)
+		if p:IsA("Part") and p.Shape == env.G.Enum.PartType.Ball then
+			local ab = b - a
+			local t = math.max(0, math.min(1, (p.Position - a):Dot(ab) / ab:Dot(ab)))
+			return ((a + ab * t) - p.Position).Magnitude < p.Size.X / 2
+		end
+		local la = p.CFrame:PointToObjectSpace(a)
+		local lb = p.CFrame:PointToObjectSpace(b)
+		local half = p.Size / 2
+		local t0, t1 = 0, 1
+		for _, axis in ipairs({ "X", "Y", "Z" }) do
+			local s, d, h = la[axis], lb[axis] - la[axis], half[axis]
+			if math.abs(d) < 1e-9 then
+				if s < -h or s > h then
+					return false
+				end
+			else
+				local ta, tb = (-h - s) / d, (h - s) / d
+				if ta > tb then
+					ta, tb = tb, ta
+				end
+				t0 = math.max(t0, ta)
+				t1 = math.min(t1, tb)
+				if t0 > t1 then
+					return false
+				end
+			end
+		end
+		return true
+	end
+
+	for i = 2, #Config.Zones do
+		it(Config.Zones[i].name .. " gate sign is readable from the previous zone", function()
+			local gateZ = 200 + (i - 1) * 260
+			local blockers = {}
+			local parts = zoneParts(i - 1)
+			-- the middle of the zone name and the speed line, seen from eye height 100 and 60 studs out
+			-- (a landmark nicking the top edge of the letters is fine; hiding the line is not)
+			for _, dist in ipairs({ 100, 60 }) do
+				local eye = D.Vector3.new(0, 7, gateZ - dist)
+				for _, y in ipairs({ 26.5, 24.2 }) do
+					local sign = D.Vector3.new(0, y, gateZ - 1.2)
+					for _, p in ipairs(parts) do
+						if p.Transparency < 0.6 and segmentHitsPart(eye, sign, p) then
+							blockers[p:GetFullName()] = true
+						end
+					end
+				end
+			end
+			local names = {}
+			for n in pairs(blockers) do
+				table.insert(names, n)
+			end
+			if #names > 0 then
+				error("gate sign hidden by: " .. table.concat(names, ", "))
+			end
+		end)
+	end
 end)
