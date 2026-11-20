@@ -88,7 +88,10 @@ local function mushroom(ctx, parent, pos, h, capD, colorIdx, glow)
 	local capColor = CAP_COLORS[(colorIdx - 1) % #CAP_COLORS + 1]
 	local base = CFrame.new(pos) * CFrame.Angles(rng(-0.08, 0.08), rng(0, 6.28), rng(-0.08, 0.08))
 	local stemD = math.max(1.6, capD * 0.17)
-	Kit.ball(m, { name = "StemBulb", diameter = stemD * 1.7, cf = base * CFrame.new(0, stemD * 0.35, 0), color = Kit.shade(STEM, 0.92), material = Enum.Material.Plastic })
+	local small = capD < 6
+	if not small then
+		Kit.ball(m, { name = "StemBulb", diameter = stemD * 1.7, cf = base * CFrame.new(0, stemD * 0.35, 0), color = Kit.shade(STEM, 0.92), material = Enum.Material.Plastic })
+	end
 	Kit.cylinder(m, { name = "Stem", height = h, diameter = stemD, cf = base * CFrame.new(0, h / 2, 0), color = STEM, material = Enum.Material.Plastic })
 	local capH = math.max(1.6, capD * 0.15)
 	local gillColor = glow and GILL_GLOWS[(colorIdx - 1) % #GILL_GLOWS + 1] or { 225, 205, 180 }
@@ -99,8 +102,8 @@ local function mushroom(ctx, parent, pos, h, capD, colorIdx, glow)
 	Kit.cylinder(m, { name = "Cap", height = capH, diameter = capD, cf = base * CFrame.new(0, h, 0), color = capColor, material = Enum.Material.SmoothPlastic })
 	Kit.cylinder(m, { name = "CapDome", height = capH * 0.8, diameter = capD * 0.72, cf = base * CFrame.new(0, h + capH * 0.85, 0), color = Kit.shade(capColor, 1.06), material = Enum.Material.SmoothPlastic })
 	Kit.cylinder(m, { name = "CapTop", height = capH * 0.6, diameter = capD * 0.38, cf = base * CFrame.new(0, h + capH * 1.5, 0), color = Kit.shade(capColor, 1.12), material = Enum.Material.SmoothPlastic })
-	for i = 1, 4 do
-		local a = i / 4 * math.pi * 2 + rng(-0.4, 0.4)
+	for i = 1, small and 0 or 3 do
+		local a = i / 3 * math.pi * 2 + rng(-0.4, 0.4)
 		local r = capD * 0.42
 		Kit.ball(m, { name = "Spot", diameter = capD * 0.13, cf = base * CFrame.new(math.cos(a) * r, h + capH * 0.4, math.sin(a) * r), color = { 250, 245, 230 }, material = Enum.Material.SmoothPlastic, collide = false })
 	end
@@ -219,9 +222,9 @@ local function heroTree(ctx, parent, zt)
 	-- two root-legs bow inward to carry the trunk over the route
 	for side = -1, 1, 2 do
 		local pts = {
-			Vector3.new(side * 31, -1, zt - 1),
-			Vector3.new(side * 25, 11, zt),
-			Vector3.new(side * 18, 22, zt + 1),
+			Vector3.new(side * 32, -1, zt - 1),
+			Vector3.new(side * 26.5, 11, zt),
+			Vector3.new(side * 19, 22, zt + 1),
 			Vector3.new(side * 9, 31, zt),
 		}
 		local ds = { 12, 10.5, 9.5 }
@@ -322,7 +325,7 @@ return function(ctx)
 	-- the cracked cobbles of the old road
 	---------------------------------------------------------------------
 	local cols = { { -75, -45 }, { -45, -13 }, { -13, 13 }, { 13, 45 }, { 45, 75 } }
-	local rows = 10
+	local rows = 8
 	local rowLen = ctx.length / rows
 	for r = 0, rows - 1 do
 		for c, span in ipairs(cols) do
@@ -338,20 +341,20 @@ return function(ctx)
 	end
 	-- trail edges: ragged mud tongues spilling into the grass
 	local trailEnd = nest.Z - nestGuard + 6
-	for i = 0, 9 do
-		local z = z0 + 8 + i * (trailEnd - z0 - 8) / 10
+	for i = 0, 6 do
+		local z = z0 + 8 + i * (trailEnd - z0 - 8) / 7
 		for side = -1, 1, 2 do
-			Kit.part(f, { name = "TrailEdge", size = Vector3.new(rng(4, 7), 0.2, rng(8, 13)), cf = CFrame.new(side * (half + rng(-0.5, 1.5)), 0.05, z) * CFrame.Angles(0, rng(-0.5, 0.5), 0), color = Kit.shade(MUD, rng(0.85, 1)), material = Enum.Material.Mud, collide = false })
+			Kit.part(f, { name = "TrailEdge", size = Vector3.new(rng(4, 7), 0.2, rng(11, 17)), cf = CFrame.new(side * (half + rng(-0.5, 1.5)), 0.05, z) * CFrame.Angles(0, rng(-0.5, 0.5), 0), color = Kit.shade(MUD, rng(0.85, 1)), material = Enum.Material.Mud, collide = false })
 		end
 	end
 	-- broken cobbles of the old road poking through the mud
-	for i = 1, 22 do
+	for i = 1, 14 do
 		local x = rng(-half + 2, half - 2)
 		local z = rng(z0 + 8, trailEnd)
 		Kit.part(f, { name = "Cobble", size = Vector3.new(rng(2.5, 4.5), 0.3, rng(2.5, 4.5)), cf = CFrame.new(x, 0.12, z) * CFrame.Angles(0, rng(0, 1.5), 0), color = Kit.shade(STONE, rng(0.85, 1.05)), material = Enum.Material.Cobblestone })
 	end
 	-- moss patches everywhere (flat, decorative)
-	for i = 1, 22 do
+	for i = 1, 16 do
 		local x = rng(-70, 70)
 		local z = rng(z0 + 6, z1 - 6)
 		Kit.cylinder(f, { name = "MossPatch", height = 0.2, diameter = rng(5, 14), cf = CFrame.new(x, 0.06, z), color = Kit.shade(MOSS, rng(0.85, 1.1)), material = Enum.Material.LeafyGrass, collide = false })
@@ -430,7 +433,7 @@ return function(ctx)
 	---------------------------------------------------------------------
 	local placed = 0
 	for i = 1, 60 do
-		if placed >= 18 then
+		if placed >= 13 then
 			break
 		end
 		local side = (i % 2 == 0) and 1 or -1
@@ -469,11 +472,11 @@ return function(ctx)
 		carrier.CanQuery = false
 		Kit.particles(carrier, { color = FIREFLY, color2 = GLOW, size = 0.3, sizeEnd = 0.1, rate = 5, lifetime = 3, speed = 0.6, emission = 1, transparency = 0.1 })
 	end
-	for i = 1, 26 do
+	for i = 1, 18 do
 		local x = rng(-66, 66)
 		local z = rng(z0 + 10, z1 - 10)
 		local mote = Kit.ball(f, { name = "Firefly", diameter = 0.35, cf = CFrame.new(x, rng(1.5, 8), z), color = FIREFLY, material = Enum.Material.Neon, collide = false, castShadow = false })
-		if i % 6 == 0 then
+		if i % 5 == 0 then
 			Kit.light(mote, FIREFLY, 8, 0.8)
 		end
 	end
