@@ -1,8 +1,8 @@
 --[[
 	MonetizationConfig — every Game Pass and Developer Product in one place.
 
-	`id` is the real Roblox asset id. It stays 0 until the item is created in the
-	Creator Dashboard (see docs/MONETIZATION.md). While an id is 0:
+	`id` is the real Roblox asset id (experience universe 10778103161; created and
+	verified through Open Cloud). While an id is 0:
 	  * live servers hide the item and never sell it;
 	  * Studio can run a mock purchase (MockInStudio) so the full grant path can be
 	    tested without spending Robux.
@@ -27,7 +27,7 @@ MonetizationConfig.ReceiptHistorySize = 200
 MonetizationConfig.Items = {
 	TurboTreadmill = {
 		type = "GamePass",
-		id = 0,
+		id = 2093464944,
 		intendedPrice = 149,
 		permanent = true,
 		icon = "🏃",
@@ -37,7 +37,7 @@ MonetizationConfig.Items = {
 	},
 	DoubleCash = {
 		type = "GamePass",
-		id = 0,
+		id = 2092415017,
 		intendedPrice = 149,
 		permanent = true,
 		icon = "💰",
@@ -47,7 +47,7 @@ MonetizationConfig.Items = {
 	},
 	InstantHatch = {
 		type = "DeveloperProduct",
-		id = 0,
+		id = 3734030874,
 		intendedPrice = 29,
 		permanent = false,
 		icon = "🥚",
@@ -57,7 +57,7 @@ MonetizationConfig.Items = {
 	},
 	SpeedBoost = {
 		type = "DeveloperProduct",
-		id = 0,
+		id = 3734030885,
 		intendedPrice = 49,
 		permanent = false,
 		icon = "⚡",
@@ -68,7 +68,7 @@ MonetizationConfig.Items = {
 	},
 	CashPack = {
 		type = "DeveloperProduct",
-		id = 0,
+		id = 3734030893,
 		intendedPrice = 79,
 		permanent = false,
 		icon = "💵",

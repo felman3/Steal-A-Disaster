@@ -1,15 +1,16 @@
 # Overnight progress (session handoff)
 
-_Last updated: end of overnight session 1 (all work committed and pushed)._
+_Last updated: monetization products created._
 
 ## 1. Status
 - Branch: `claude/adoring-albattani-tv15ea` (pushed to origin after each batch; never force-pushed).
 - Latest commit: see `git log -1` (this file is committed with each batch).
-- Roblox: **published** by the user. Universe `10778014315`, root place `71402086993128`, visibility **PRIVATE**.
-  Studio opens it from Roblox (Team Create). Studio id changes per session: use `list_roblox_studios`.
-  `save_place` = new place version (NOT a publish). Last saved version: 14.
-- Monetization: code complete (ec9125e). **Products NOT created yet** (all ids are still 0 in
-  `src/shared/Config/MonetizationConfig.lua`). Blocker below.
+- Roblox: TWO private experiences exist. The game now lives in universe **10778103161**, root place
+  **128794422486314** (user chose this one). Old copy: universe 10778014315 / place 71402086993128 (unused).
+  `save_place` = new place version (NOT a publish). The user must File → Publish for live servers.
+- Monetization: **DONE**. Created + verified via Open Cloud in universe 10778103161 and wired in MonetizationConfig:
+  Turbo Treadmill pass 2093464944 (149), Double Cash pass 2092415017 (149), Instant Hatch 3734030874 (29),
+  Speed Boost 3734030885 (49), Cash Pack 3734030893 (79). Shop shows Roblox prices. Owner sees passes OWNED.
 
 ## 2. Completed (this run)
 - Product icons: `tools/make-icons.js` → `assets/icons/*.png` (5 icons, committed).
