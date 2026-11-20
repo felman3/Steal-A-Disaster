@@ -13308,6 +13308,97 @@ local function buildZones(screen)
 	return p
 end
 
+-- Stats ------------------------------------------------------------------------------
+-- Everything comes from the server snapshot; nothing here is computed from client state.
+local function buildStats(screen)
+	local p, body = makePanel(screen, "StatsPanel", "📊 STATS", Theme.Blue)
+	local list = Instance.new("UIListLayout")
+	list.Padding = UDim.new(0, 6)
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.Parent = body
+	local order = 0
+	local values = {}
+	local function section(text, color)
+		order = order + 1
+		Theme.label(body, { name = "S" .. order, text = text, size = UDim2.new(1, -12, 0, 30), font = Theme.FontDisplay, color = color, order = order, z = 12, strokeThickness = 2, xAlign = Enum.TextXAlignment.Left })
+	end
+	local function row(key, title)
+		order = order + 1
+		local r = Theme.frame(body, { name = key, size = UDim2.new(1, -12, 0, 34), color = Theme.White, corner = 8, order = order, z = 12 })
+		Theme.label(r, { name = "Title", text = title, size = UDim2.new(0.5, -10, 1, -8), position = UDim2.new(0, 10, 0, 4), xAlign = Enum.TextXAlignment.Left, color = Color3.fromRGB(90, 90, 110), stroke = false, z = 13 })
+		values[key] = Theme.label(r, { name = "Value", text = "—", size = UDim2.new(0.5, -10, 1, -8), position = UDim2.new(0.5, 0, 0, 4), xAlign = Enum.TextXAlignment.Right, color = Theme.Ink, stroke = false, z = 13 })
+	end
+	section("⚡ PROGRESS", Theme.Orange)
+	row("Speed", "Speed")
+	row("Walk", "Walk speed")
+	row("Zone", "Best zone")
+	row("Next", "Next zone")
+	section("💰 INCOME", Theme.Green)
+	row("Money", "Money")
+	row("Income", "Income")
+	section("🏠 BASE", Theme.Blue)
+	row("Disasters", "Disasters on display")
+	row("Collection", "Collection")
+	row("Pods", "Incubating")
+	row("Upgrades", "Upgrade levels")
+	section("🎁 BOOSTS", Theme.Frenzy)
+	row("Passes", "Game Passes")
+	row("Boost", "Speed Boost")
+	row("Hatches", "Saved Instant Hatches")
+	section("🏆 CAREER", Theme.Purple)
+	row("Hatched", "Disasters hatched")
+	row("Stolen", "Cores stolen")
+	row("Robbed", "Stolen from players")
+
+	local totalDisasters = 0
+	for _ in pairs(Config.Disasters) do
+		totalDisasters = totalDisasters + 1
+	end
+	local function refresh(snap)
+		if not snap then
+			return
+		end
+		local zi = SpeedLogic.highestUnlockedZone(snap.speed or 0)
+		values.Speed.Text = "⚡ " .. Util.formatNumber(snap.speed or 0) .. ((snap.speedMult or 1) > 1 and ("  (x" .. snap.speedMult .. " training)") or "")
+		values.Walk.Text = string.format("%.1f", snap.walk or 16)
+		values.Zone.Text = zi .. ". " .. Config.Zones[zi].name
+		if snap.nextZone ~= "" and Config.ZoneById[snap.nextZone] then
+			local left = (snap.nextZoneReq or 0) - (snap.speed or 0)
+			values.Next.Text = Config.ZoneById[snap.nextZone].name .. " — " .. Util.formatNumber(math.max(0, left)) .. " more"
+		else
+			values.Next.Text = "All zones unlocked!"
+		end
+		values.Money.Text = Util.formatMoney(snap.money or 0)
+		values.Income.Text = Util.formatMoney(snap.income or 0) .. "/s" .. ((snap.incomeMult or 1) > 1 and ("  (x" .. snap.incomeMult .. ")") or "")
+		values.Disasters.Text = #(snap.disasters or {}) .. " / " .. ((snap.upgrades and snap.upgrades.Pedestals) or 0)
+		local found = 0
+		for _ in pairs(snap.index or {}) do
+			found = found + 1
+		end
+		values.Collection.Text = found .. " / " .. totalDisasters .. "  (" .. math.floor(found / totalDisasters * 100 + 0.5) .. "%)"
+		values.Pods.Text = (snap.podsUsed or 0) .. " / " .. ((snap.upgrades and snap.upgrades.Pods) or 0) .. ((snap.storage or 0) > 0 and ("  (+" .. snap.storage .. " waiting)") or "")
+		local u = snap.upgrades or {}
+		values.Upgrades.Text = "Tread " .. (u.Treadmill or 1) .. " • Pack " .. (u.Carry or 1) .. " • Shield " .. (u.Shield or 1)
+		local passes = {}
+		for key, owned in pairs(snap.passes or {}) do
+			if owned then
+				table.insert(passes, key == "TurboTreadmill" and "Turbo" or (key == "DoubleCash" and "2x Cash" or key))
+			end
+		end
+		table.sort(passes)
+		values.Passes.Text = (#passes > 0) and table.concat(passes, ", ") or "None"
+		values.Boost.Text = ((snap.boostSpeed or 0) > 0) and (Util.formatTime(snap.boostSpeed) .. " left") or "Off"
+		values.Hatches.Text = tostring(snap.hatchCredits or 0)
+		local st = snap.stats or {}
+		values.Hatched.Text = tostring(st.hatched or 0)
+		values.Stolen.Text = tostring(st.stolen or 0)
+		values.Robbed.Text = tostring(st.robbed or 0)
+	end
+	State.Changed:Connect(refresh)
+	refresh(State.get())
+	return p
+end
+
 function Panels.toggle(name)
 	if open == name then
 		Panels.close()
@@ -13343,12 +13434,13 @@ function Panels.mount(screen)
 	panels.Shop = buildShop(screen)
 	panels.Index = buildIndex(screen)
 	panels.Zones = buildZones(screen)
+	panels.Stats = buildStats(screen)
 
 	-- compact left nav
 	local nav = Instance.new("Frame")
 	nav.Name = "LeftNav"
 	nav.BackgroundTransparency = 1
-	nav.Size = UDim2.new(0, 84, 0, 3 * 88)
+	nav.Size = UDim2.new(0, 84, 0, 4 * 88)
 	nav.Position = UDim2.new(0, 10, 0.5, 0)
 	nav.AnchorPoint = Vector2.new(0, 0.5)
 	nav.Parent = screen
@@ -13365,6 +13457,9 @@ function Panels.mount(screen)
 	end })
 	buttons.Lock = Theme.button(nav, { name = "LockButton", icon = "🛡", text = "LOCK", color = Theme.Blue, size = UDim2.new(0, 78, 0, 78), order = 3, onClick = function()
 		Remotes.get("RequestShield"):FireServer()
+	end })
+	buttons.Stats = Theme.button(nav, { name = "StatsButton", icon = "📊", text = "STATS", color = Theme.Orange, size = UDim2.new(0, 78, 0, 78), order = 4, onClick = function()
+		Panels.toggle("Stats")
 	end })
 
 	-- lock button shows the remaining shield time

@@ -82,6 +82,34 @@ describe("client HUD", function()
 		noErrors(env)
 	end)
 
+	it("stats panel shows server progress, income, collection and boosts", function()
+		local env, S, player = boot()
+		local data = S.PlayerDataService:get(player)
+		data.speed = 3000
+		data.money = 12345
+		data.index.DustDevil = true
+		data.disasters = { { s = 1, d = "DustDevil", z = 1 } }
+		data.passes.DoubleCash = true
+		data.boostSpeed = 300
+		data.stats.hatched = 7
+		S.EconomyService:recompute(player)
+		S.PlayerDataService:markDirty(player)
+		env.advance(0.3)
+		local screen = hud(player)
+		screen.LeftNav.StatsButton.Activated:Fire()
+		expect(screen.StatsPanel.Visible).toBe(true)
+		local body = screen.StatsPanel.Body
+		expect(body.Zone.Value.Text).toBe("3. Droughtlands")
+		expect(body.Next.Value.Text).toContain("Frostfall")
+		expect(body.Income.Value.Text).toContain("(x2)")
+		expect(body.Disasters.Value.Text).toBe("1 / 4")
+		expect(body.Collection.Value.Text).toContain("1 / 37")
+		expect(body.Passes.Value.Text).toBe("2x Cash")
+		expect(body.Boost.Value.Text).toContain("left")
+		expect(body.Hatched.Value.Text).toBe("7")
+		noErrors(env)
+	end)
+
 	it("toasts and banners draw above open panels", function()
 		local env, S, player = boot()
 		local screen = hud(player)
