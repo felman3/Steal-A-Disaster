@@ -1,13 +1,13 @@
 # Overnight progress (session handoff)
 
-_Last updated: after the "Disaster Index search/filter/sort" batch._
+_Last updated: after the "Backdrop scenery" batch._
 
 ## 1. Status
 - Branch: `claude/adoring-albattani-tv15ea` (pushed to origin after each batch; never force-pushed).
 - Latest commit: see `git log -1` (this file is committed with each batch).
 - Roblox: **published** by the user. Universe `10778014315`, root place `71402086993128`, visibility **PRIVATE**.
   Studio opens it from Roblox (Team Create). Studio id changes per session: use `list_roblox_studios`.
-  `save_place` = new place version (NOT a publish). Last saved version: 7.
+  `save_place` = new place version (NOT a publish). Last saved version: 11+.
 - Monetization: code complete (ec9125e). **Products NOT created yet** (all ids are still 0 in
   `src/shared/Config/MonetizationConfig.lua`). Blocker below.
 
@@ -25,6 +25,11 @@ _Last updated: after the "Disaster Index search/filter/sort" batch._
   40x16 px tap target). Zones panel text lines widened (6 px → 10 px on the smallest phone).
 - **Disaster Index**: search (matches discovered names only — no spoilers), rarity chips, SHOW ALL/OWNED,
   SORT ZONE/RARITY/INCOME (within each zone), progress % + bar, ×n owned badges from server data.
+- **Backdrop** (`src/server/World/Backdrop.lua`, built by MapBuilder in a pcall): the world used to float in
+  empty sky. Now ground skirts to the horizon + per-zone silhouettes (hills/skyline, giant trees, mesas, snow
+  peaks, volcanoes, trench cliffs + neon coral, prehistoric volcano, cloud sea + floating islands, void shards),
+  hub surroundings and a void area past the end wall. ~300 decorative parts (no collide/touch/query/shadow).
+  zones.spec checks it stays outside the route strip.
 - **Bug fixed**: toasts and announcement banners were drawn behind open panels (ZIndex 1 vs 10).
   Now Toasts 40, Banner 35 (`Announcer.lua`).
 
@@ -37,8 +42,7 @@ _Last updated: after the "Disaster Index search/filter/sort" batch._
    MonetizationConfig, rebuild, sync Studio, test purchases (Studio test purchase dialog), commit.
 2. UI pass, remaining: world labels (TREADMILL billboard is occluded by the base side
    wall at close range; pedestal labels show base income while HUD shows Double Cash total).
-4. Environment: distant background scenery around the route/hub (currently empty sky/void beyond walls),
-   hub/base polish. Zone builders in `src/server/World/Zones/*.lua` must keep `tests/specs/zones.spec.lua`
+4. Environment, remaining: hub/base polish, zone lighting/atmosphere tweaks. Zone builders in `src/server/World/Zones/*.lua` must keep `tests/specs/zones.spec.lua`
    contract (corridor clear, part budget ≤650/zone, gate signs visible).
 5. Progression info: stats panel (owned disasters, collection %, income, boosts), maybe daily reward.
 6. Audio/visual polish (no audio assets exist; only original/licensed).
@@ -73,7 +77,7 @@ _Last updated: after the "Disaster Index search/filter/sort" batch._
 - Optional: Game Settings → Security → Enable Studio Access to API Services (real DataStore in Studio).
 
 ## 7. Testing status
-- Automated: 215 pass; lint ok; build ok.
+- Automated: 216 pass; lint ok; build ok.
 - Studio (published place): all 5 Quick Travel buttons, locked-zone refusal (click + forced remote),
   zone travel after unlock, refusal while carrying, camera after travel, shop categories render,
   not-enough-money toast above the shop. Earlier sessions: full loop, PvP 2-player, monetization mock.

@@ -445,6 +445,13 @@ function MapBuilder.build()
 		local nestCenter, points = buildNest(folder, i, zone, palette)
 		refs.zones[i] = { folder = folder, gate = gate, nestCenter = nestCenter, nestPoints = points, palette = palette }
 	end
+	-- scenery beyond the playable strip (decorative; never allowed to break the world)
+	local okB, errB = pcall(function()
+		require(script.Parent:WaitForChild("Backdrop")).build(root, seededRng(4242))
+	end)
+	if not okB then
+		warn("[MapBuilder] backdrop failed: " .. tostring(errB))
+	end
 	return refs
 end
 

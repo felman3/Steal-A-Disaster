@@ -204,3 +204,29 @@ describe("zone builders", function()
 		end)
 	end
 end)
+
+describe("backdrop scenery", function()
+	it("exists, is purely decorative, and stays outside the playable route", function()
+		local backdrop = env.G.workspace.World:FindFirstChild("Backdrop")
+		expect(backdrop ~= nil).toBe(true)
+		local count, problems = 0, {}
+		for _, p in ipairs(backdrop:GetDescendants()) do
+			if p:IsA("BasePart") then
+				count = count + 1
+				if p.CanCollide or p.CanTouch or p.CanQuery then
+					table.insert(problems, "interactive: " .. p:GetFullName())
+				end
+				local lo, hi = aabb(p)
+				-- the route strip (z 200..2540) must stay clear between the walls
+				if hi.Z > 200 and lo.Z < 2540 and lo.X < 76 and hi.X > -76 and hi.Y > -1 then
+					table.insert(problems, "inside route: " .. p:GetFullName() .. " " .. tostring(lo) .. " .. " .. tostring(hi))
+				end
+			end
+		end
+		expect(count).toBeAtLeast(100)
+		expect(count).toBeAtMost(600)
+		if #problems > 0 then
+			error(table.concat(problems, "\n", 1, math.min(#problems, 8)))
+		end
+	end)
+end)
