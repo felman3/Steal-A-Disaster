@@ -89,6 +89,8 @@ const xml = [
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
 fs.writeFileSync(OUT, xml);
+// a copy at the repo root so a plain "Download ZIP" from GitHub includes a ready-to-open place
+fs.writeFileSync(path.join(ROOT, "StealADisaster.rbxlx"), xml);
 console.log(
   `built ${path.relative(ROOT, OUT)} — ${counts.ModuleScript} modules, ${counts.Script} server scripts, ${counts.LocalScript} local scripts, ${counts.Folder} folders (${(xml.length / 1024).toFixed(0)} KB)`
 );
