@@ -84,6 +84,9 @@ const xml = [
     item("StarterPlayerScripts", [["string", "Name", "StarterPlayerScripts"]], [folder("Client", "src/client")]),
   ]),
   item("Players", [["string", "Name", "Players"], ["int", "MaxPlayers", "8"]]),
+  // Legacy chat is retired by Roblox; without this the place falls back to it and has no chat
+  // (and the Studio dev commands can't be typed).
+  item("TextChatService", [["string", "Name", "TextChatService"], ["token", "ChatVersion", "1"]]), // 1 = TextChatService
   "</roblox>",
 ].join("\n");
 

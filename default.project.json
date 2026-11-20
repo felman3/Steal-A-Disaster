@@ -24,6 +24,11 @@
         "StreamingEnabled": false
       }
     },
+    "TextChatService": {
+      "$properties": {
+        "ChatVersion": "TextChatService"
+      }
+    },
     "Lighting": {
       "$properties": {
         "Technology": "Future"
