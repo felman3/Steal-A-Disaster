@@ -1,6 +1,6 @@
 # Overnight progress (session handoff)
 
-_Last updated: after the "Stats panel" batch._
+_Last updated: after the "pedestal income labels" batch._
 
 ## 1. Status
 - Branch: `claude/adoring-albattani-tv15ea` (pushed to origin after each batch; never force-pushed).
@@ -33,6 +33,8 @@ _Last updated: after the "Stats panel" batch._
 - **Stats panel** (left nav 📊 STATS): Speed/walk/best+next zone, money/income (with multipliers), disasters on
   display, collection %, pods/storage, upgrade levels, passes, Speed Boost time, saved hatches, career counters.
   All from the server snapshot.
+- Pedestal labels show the real income with Double Cash (refreshIncomeLabels on pass grant); sell value unchanged.
+  TREADMILL tag raised above the base side wall.
 - **Bug fixed**: toasts and announcement banners were drawn behind open panels (ZIndex 1 vs 10).
   Now Toasts 40, Banner 35 (`Announcer.lua`).
 
@@ -43,8 +45,7 @@ _Last updated: after the "Stats panel" batch._
 1. **Monetization products** — blocked on user (see 6). When unblocked: create 2 passes + 3 products
    (multipart POST with `imageFile` from `assets/icons`), re-list to read real IDs, put IDs in
    MonetizationConfig, rebuild, sync Studio, test purchases (Studio test purchase dialog), commit.
-2. UI pass, remaining: world labels (TREADMILL billboard is occluded by the base side
-   wall at close range; pedestal labels show base income while HUD shows Double Cash total).
+2. UI pass, remaining: a full resolution sweep (320–1920) of all panels; guardian/core label overlap at nests.
 4. Environment, remaining: hub/base polish, zone lighting/atmosphere tweaks. Zone builders in `src/server/World/Zones/*.lua` must keep `tests/specs/zones.spec.lua`
    contract (corridor clear, part budget ≤650/zone, gate signs visible).
 5. Progression, remaining: maybe a daily reward / collection milestones (only if it fits the economy).

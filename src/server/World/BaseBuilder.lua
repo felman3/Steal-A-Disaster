@@ -103,7 +103,7 @@ local function buildTreadmill(model, slotIndex, cf)
 	Kit.text(sg, { name = "Title", text = "TREADMILL", size = UDim2.new(1, 0, 0.35, 0), color = TRIM, font = Enum.Font.LuckiestGuy })
 	Kit.text(sg, { name = "Gain", text = "+5 SPEED / STEP", size = UDim2.new(1, 0, 0.6, 0), position = UDim2.new(0, 0, 0.38, 0), color = { 255, 255, 255 } })
 	-- the screen faces the runner, so a floating label makes the treadmill easy to spot from the base entrance
-	local tag = Kit.billboard(console, { name = "TreadmillLabel", size = UDim2.new(12, 0, 3, 0), offset = Vector3.new(0, 4.5, 0), maxDistance = 90 })
+	local tag = Kit.billboard(console, { name = "TreadmillLabel", size = UDim2.new(12, 0, 3, 0), offset = Vector3.new(0, 7.5, 0), maxDistance = 90 })
 	Kit.text(tag, { name = "Text", text = "🏃 TREADMILL", color = TRIM, font = Enum.Font.LuckiestGuy })
 	-- conveyor: the belt pushes toward local -X; running toward the console keeps you in place
 	belt.AssemblyLinearVelocity = rot:VectorToWorldSpace(Vector3.new(-Config.Speed.BeltSpeed, 0, 0))

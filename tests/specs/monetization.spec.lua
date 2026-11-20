@@ -313,6 +313,7 @@ describe("Game Passes", function()
 		env.advance(1)
 		local data = S.PlayerDataService:get(p)
 		data.disasters = { { s = 1, d = "DustDevil", z = 1 } }
+		S.DisasterCollectionService:rebuildAll(p)
 		local base = S.EconomyService:recompute(p)
 		local market = env.G.game:GetService("MarketplaceService")
 		market.PromptGamePassPurchaseFinished:Fire(p, IDS.DoubleCash, true)
@@ -322,6 +323,9 @@ describe("Game Passes", function()
 		expect(data.passes.TurboTreadmill == nil).toBe(true)
 		expect(S.EconomyService:incomeOf(p)).toBe(base * 2)
 		expect(S.SpeedService:addSteps(p, 1)).toBe(5)
+		-- the pedestal label shows what the disaster really earns now
+		local label = S.BaseService:baseOf(p).pedestals[1].root.DisasterLabel
+		expect(label.Income.Text).toBe("$4/s")
 		market.PromptGamePassPurchaseFinished:Fire(p, IDS.TurboTreadmill, true)
 		env.advance(0.1)
 		expect(S.SpeedService:addSteps(p, 1)).toBe(10)

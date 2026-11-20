@@ -65,6 +65,7 @@ function MonetizationService:_applyEffects(player)
 	player:SetAttribute("BoostSeconds", math.ceil(data.boostSpeed or 0))
 	S.EconomyService:recompute(player)
 	S.BaseService:refresh(player)
+	S.DisasterCollectionService:refreshIncomeLabels(player)
 	S.PlayerDataService:markDirty(player)
 end
 

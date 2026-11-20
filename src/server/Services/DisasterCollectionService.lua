@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config.GameConfig)
 local EconomyLogic = require(Shared.Logic.EconomyLogic)
+local MonetizationLogic = require(Shared.Logic.MonetizationLogic)
 local IncubatorLogic = require(Shared.Logic.IncubatorLogic)
 local DataSchema = require(Shared.Logic.DataSchema)
 local RateLimiter = require(Shared.Logic.RateLimiter)
@@ -100,7 +101,7 @@ function DisasterCollectionService:_buildVisual(player, entry)
 		Kit.text(bb, { name = "Mutation", text = string.upper(entry.m), size = UDim2.new(1, 0, 0.26, 0), color = mut.color })
 	end
 	Kit.text(bb, { name = "Name", text = def.name, size = UDim2.new(1, 0, 0.36, 0), position = UDim2.new(0, 0, 0.24, 0), color = rarity.color, font = Enum.Font.LuckiestGuy })
-	Kit.text(bb, { name = "Income", text = Util.formatMoney(EconomyLogic.incomeFor(entry)) .. "/s", size = UDim2.new(1, 0, 0.32, 0), position = UDim2.new(0, 0, 0.62, 0), color = { 120, 255, 120 } })
+	Kit.text(bb, { name = "Income", text = self:_incomeText(player, entry), size = UDim2.new(1, 0, 0.32, 0), position = UDim2.new(0, 0, 0.62, 0), color = { 120, 255, 120 } })
 
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "SellPrompt"
@@ -118,7 +119,23 @@ function DisasterCollectionService:_buildVisual(player, entry)
 			self:sell(player, slot)
 		end
 	end)
-	visuals[player][entry.s] = { model = m, label = bb, prompt = prompt }
+	visuals[player][entry.s] = { model = m, label = bb, prompt = prompt, entry = entry }
+end
+
+-- what this disaster actually earns for its owner (Double Cash included)
+function DisasterCollectionService:_incomeText(player, entry)
+	local mult = MonetizationLogic.incomeMultiplier(S.PlayerDataService:get(player))
+	return Util.formatMoney(EconomyLogic.incomeFor(entry) * mult) .. "/s"
+end
+
+-- re-label every pedestal (after a pass changes the income multiplier)
+function DisasterCollectionService:refreshIncomeLabels(player)
+	for _, v in pairs(visuals[player] or {}) do
+		local t = v.label and v.label:FindFirstChild("Income")
+		if t and v.entry then
+			t.Text = self:_incomeText(player, v.entry)
+		end
+	end
 end
 
 function DisasterCollectionService:rebuildAll(player)
