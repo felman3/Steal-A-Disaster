@@ -22,6 +22,7 @@ local ORDER = {
 	"DisasterCollectionService",
 	"GuardianService",
 	"UpgradeService",
+	"DevService", -- Studio-only chat commands
 }
 
 local S = {}

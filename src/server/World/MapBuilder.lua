@@ -214,49 +214,89 @@ local function tree(parent, pos, scale, leafColor)
 end
 MapBuilder.tree = tree
 
+local function bench(parent, cf)
+	Kit.part(parent, { name = "BenchSeat", size = Vector3.new(6, 0.5, 2), cf = cf * CFrame.new(0, 1.6, 0), color = { 170, 110, 60 }, material = Enum.Material.WoodPlanks })
+	Kit.part(parent, { name = "BenchBack", size = Vector3.new(6, 1.6, 0.4), cf = cf * CFrame.new(0, 2.6, 0.8), color = { 170, 110, 60 }, material = Enum.Material.WoodPlanks })
+	for _, x in ipairs({ -2.6, 2.6 }) do
+		Kit.part(parent, { name = "BenchLeg", size = Vector3.new(0.4, 1.4, 1.8), cf = cf * CFrame.new(x, 0.9, 0), color = DARK, material = Enum.Material.Metal })
+	end
+end
+
+local function planter(parent, pos, size)
+	Kit.part(parent, { name = "Planter", size = Vector3.new(size.X, 1.6, size.Z), cf = CFrame.new(pos + Vector3.new(0, 1.0, 0)), color = { 150, 152, 162 }, material = Enum.Material.Concrete })
+	Kit.part(parent, { name = "PlanterSoil", size = Vector3.new(size.X - 1, 0.3, size.Z - 1), cf = CFrame.new(pos + Vector3.new(0, 1.85, 0)), color = { 90, 150, 60 }, material = Enum.Material.Grass })
+end
+
 local function buildHub(root)
 	local hub = Kit.model(root, "Hub")
 	local c = Config.World.HubCenter
 	local size = Config.World.HubSize
 	local cx, cz = c[1], c[3]
+	local hubZ0, hubZ1 = cz - size[2] / 2, cz + size[2] / 2
 	-- foundation & plaza
 	Kit.part(hub, { name = "Ground", size = Vector3.new(size[1], 4, size[2]), cf = CFrame.new(cx, -2, cz), color = { 120, 170, 90 }, material = Enum.Material.Grass })
 	Kit.part(hub, { name = "Plaza", size = Vector3.new(150, 0.4, size[2] - 10), cf = CFrame.new(0, 0.2, cz), color = CONCRETE, material = Enum.Material.Concrete })
-	-- plaza tile seams
-	for i = -6, 6 do
-		Kit.part(hub, { name = "Seam", size = Vector3.new(150, 0.42, 0.25), cf = CFrame.new(0, 0.21, cz + i * 28), color = { 170, 170, 180 }, material = Enum.Material.Concrete })
+	-- plaza tile bands (alternate tones, readable scale)
+	for i = 0, 18 do
+		if i % 2 == 0 then
+			Kit.part(hub, { name = "TileBand", size = Vector3.new(150, 0.42, 10), cf = CFrame.new(0, 0.21, hubZ0 + 10 + i * 20), color = { 182, 184, 194 }, material = Enum.Material.Concrete })
+		end
 	end
-	-- central avenue toward the route
-	Kit.part(hub, { name = "Avenue", size = Vector3.new(W.PathWidth + 6, 0.5, 200), cf = CFrame.new(0, 0.25, 90), color = { 70, 72, 82 }, material = Enum.Material.Asphalt })
-	for i = 0, 9 do
-		Kit.part(hub, { name = "Arrow", size = Vector3.new(1.2, 0.52, 6), cf = CFrame.new(0, 0.26, 4 + i * 19), color = { 255, 255, 255 }, material = Enum.Material.SmoothPlastic })
+	-- central avenue running the full hub toward the route
+	Kit.part(hub, { name = "Avenue", size = Vector3.new(W.PathWidth + 6, 0.5, hubZ1 - (hubZ0 + 40)), cf = CFrame.new(0, 0.25, (hubZ1 + hubZ0 + 40) / 2), color = { 70, 72, 82 }, material = Enum.Material.Asphalt })
+	for z = hubZ0 + 50, hubZ1 - 20, 16 do
+		Kit.part(hub, { name = "Dash", size = Vector3.new(0.8, 0.52, 7), cf = CFrame.new(0, 0.26, z), color = { 255, 255, 255 }, material = Enum.Material.SmoothPlastic })
 	end
-	hazardStripe(hub, CFrame.new(0, 0.5, 186), W.PathWidth + 6, 3, 10)
+	for i = 0, 2 do
+		Kit.part(hub, { name = "Arrow", shape = "Wedge", size = Vector3.new(8, 0.3, 5), cf = CFrame.new(0, 0.66, hubZ1 - 34 + i * 9) * CFrame.Angles(math.pi / 2, math.pi, 0), color = HAZARD_Y, material = Enum.Material.SmoothPlastic, collide = false })
+	end
+	hazardStripe(hub, CFrame.new(0, 0.52, hubZ1 - 6), W.PathWidth + 6, 3, 10)
 
-	-- side lawns between plaza and bases get flower beds & lamps
+	-- a colored walkway from the avenue to each base (in the base's own color)
+	local BaseBuilder = require(script.Parent:WaitForChild("BaseBuilder"))
+	for i, slot in ipairs(Config.Bases.Slots) do
+		local col = BaseBuilder.SLOT_COLORS[(i - 1) % #BaseBuilder.SLOT_COLORS + 1]
+		local x0 = W.PathWidth / 2 + 3
+		local x1 = math.abs(slot.x) - Config.Bases.Size / 2 - 2
+		local len = x1 - x0
+		local sx = (slot.x > 0) and 1 or -1
+		Kit.part(hub, { name = "Walkway", size = Vector3.new(len, 0.46, 12), cf = CFrame.new(sx * (x0 + len / 2), 0.23, slot.z), color = col, material = Enum.Material.SmoothPlastic })
+		Kit.part(hub, { name = "WalkwayEdge", size = Vector3.new(len, 0.48, 1), cf = CFrame.new(sx * (x0 + len / 2), 0.24, slot.z - 6.5), color = Kit.shade(col, 0.6), material = Enum.Material.SmoothPlastic })
+		Kit.part(hub, { name = "WalkwayEdge", size = Vector3.new(len, 0.48, 1), cf = CFrame.new(sx * (x0 + len / 2), 0.24, slot.z + 6.5), color = Kit.shade(col, 0.6), material = Enum.Material.SmoothPlastic })
+		-- slot number marker at the avenue end
+		local marker = Kit.cylinder(hub, { name = "SlotMarker", height = 0.5, diameter = 7, cf = CFrame.new(sx * (x0 + 4), 0.3, slot.z), color = col, material = Enum.Material.Neon })
+		marker.CanCollide = false
+	end
+
+	-- landscaping between walkways
 	local rng = seededRng(77)
-	for side = -1, 1, 2 do
-		for i = 0, 7 do
-			local z = -190 + i * 48
-			local x = side * 79
+	local gaps = { -195, -105, -15, 75, 150 }
+	for _, z in ipairs(gaps) do
+		for side = -1, 1, 2 do
+			planter(hub, Vector3.new(side * 50, 0.4, z), Vector3.new(22, 0, 14))
+			tree(hub, Vector3.new(side * 44, 2, z), 0.8 + rng(0, 0.2))
+			tree(hub, Vector3.new(side * 56, 2, z + 2), 0.7 + rng(0, 0.2), { 100, 185, 80 })
+			bench(hub, CFrame.new(side * 30, 0.4, z) * CFrame.Angles(0, side > 0 and -math.pi / 2 or math.pi / 2, 0))
+		end
+	end
+	-- lamps & zone-colored flags along the avenue
+	for i = 0, 7 do
+		local z = hubZ0 + 60 + i * 42
+		for side = -1, 1, 2 do
+			local x = side * (W.PathWidth / 2 + 6)
 			Kit.cylinder(hub, { name = "LampPost", height = 12, diameter = 0.6, cf = CFrame.new(x, 6, z), color = DARK, material = Enum.Material.Metal })
 			local bulb = Kit.part(hub, { name = "Lamp", size = Vector3.new(1.6, 1, 1.6), cf = CFrame.new(x, 12.4, z), color = { 255, 240, 200 }, material = Enum.Material.Neon })
 			Kit.light(bulb, { 255, 230, 190 }, 22, 1.2)
+			local zone = Config.Zones[(i % #Config.Zones) + 1]
+			local zc = zone.sky.fog
+			Kit.part(hub, { name = "Banner", size = Vector3.new(0.2, 4, 2.4), cf = CFrame.new(x, 9, z + 1.4), color = zc, material = Enum.Material.Fabric, collide = false })
 		end
 	end
 
-	-- landmarks
-	stormTower(hub, Vector3.new(0, 0, -130))
-	local _, indexPrompt = kiosk(hub, Vector3.new(-42, 0.4, -60), "DISASTER INDEX", { 150, 80, 230 }, "Index")
-	local _, shopPrompt = kiosk(hub, Vector3.new(42, 0.4, -60), "UPGRADES", { 50, 190, 90 }, "Shop")
-
-	-- route gate
-	local gate = Kit.model(hub, "RouteGate")
-	for _, x in ipairs({ -W.PathWidth / 2 - 4, W.PathWidth / 2 + 4 }) do
-		Kit.part(gate, { name = "Pillar", size = Vector3.new(5, 26, 5), cf = CFrame.new(x, 13, 188), color = DARK, material = Enum.Material.Metal })
-		Kit.part(gate, { name = "PillarStripe", size = Vector3.new(5.2, 2, 5.2), cf = CFrame.new(x, 20, 188), color = HAZARD_Y, material = Enum.Material.SmoothPlastic })
-	end
-	signBoard(gate, CFrame.new(0, 24, 188), Vector3.new(W.PathWidth + 14, 6, 1.2), "THE DISASTER ROUTE", "Steal cores. Run home. Don't get caught.", HAZARD_Y)
+	-- landmarks: storm tower at the far end, kiosks between the first base rows
+	stormTower(hub, Vector3.new(0, 0, hubZ0 + 30))
+	local _, indexPrompt = kiosk(hub, Vector3.new(-40, 0.4, -105), "DISASTER INDEX", { 150, 80, 230 }, "Index")
+	local _, shopPrompt = kiosk(hub, Vector3.new(40, 0.4, -105), "UPGRADES", { 50, 190, 90 }, "Shop")
 
 	-- neutral fallback spawn (players are moved to their base on spawn)
 	local spawn = Instance.new("SpawnLocation")
@@ -273,15 +313,15 @@ local function buildHub(root)
 	for side = -1, 1, 2 do
 		Kit.part(hub, { name = "Fence", size = Vector3.new(1, 5, size[2]), cf = CFrame.new(side * (size[1] / 2 - 0.5), 2.5, cz), color = DARK, material = Enum.Material.Metal })
 	end
-	Kit.part(hub, { name = "Fence", size = Vector3.new(size[1], 5, 1), cf = CFrame.new(0, 2.5, cz - size[2] / 2 + 0.5), color = DARK, material = Enum.Material.Metal })
+	Kit.part(hub, { name = "Fence", size = Vector3.new(size[1], 5, 1), cf = CFrame.new(0, 2.5, hubZ0 + 0.5), color = DARK, material = Enum.Material.Metal })
 	for side = -1, 1, 2 do
 		-- front fence leaves the route gap open
 		local w = size[1] / 2 - (W.PathWidth / 2 + 7)
-		Kit.part(hub, { name = "Fence", size = Vector3.new(w, 5, 1), cf = CFrame.new(side * (W.PathWidth / 2 + 7 + w / 2), 2.5, cz + size[2] / 2 - 0.5), color = DARK, material = Enum.Material.Metal })
+		Kit.part(hub, { name = "Fence", size = Vector3.new(w, 5, 1), cf = CFrame.new(side * (W.PathWidth / 2 + 7 + w / 2), 2.5, hubZ1 - 0.5), color = DARK, material = Enum.Material.Metal })
 	end
 	for i = 1, 14 do
 		local side = (i % 2 == 0) and 1 or -1
-		tree(hub, Vector3.new(side * (size[1] / 2 - 6), 0, -200 + i * 26 + rng(-4, 4)), 1 + rng(-0.1, 0.25))
+		tree(hub, Vector3.new(side * (size[1] / 2 - 6), 0, hubZ0 + 10 + i * 26 + rng(-4, 4)), 1 + rng(-0.1, 0.25))
 	end
 	return { model = hub, indexPrompt = indexPrompt, shopPrompt = shopPrompt }
 end

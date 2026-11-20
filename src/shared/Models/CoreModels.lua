@@ -237,9 +237,9 @@ local function mutationFx(m, root, mutationId)
 end
 
 --[[
-	CoreModels.build(coreId, mutationId) -> Model
+	CoreModels.build(coreId, mutationId, sizeMult?) -> Model
 ]]
-function CoreModels.build(coreId, mutationId)
+function CoreModels.build(coreId, mutationId, sizeMult)
 	local def = Config.Cores[coreId]
 	if not def then
 		error("Unknown core " .. tostring(coreId))
@@ -265,7 +265,7 @@ function CoreModels.build(coreId, mutationId)
 	mutationFx(m, root, mutationId)
 
 	-- slight bigger cores for higher rarity
-	local scale = 1 + (rarity.rank - 1) * 0.07
+	local scale = (1 + (rarity.rank - 1) * 0.07) * (sizeMult or 1)
 	if scale ~= 1 then
 		m:ScaleTo(scale)
 	end

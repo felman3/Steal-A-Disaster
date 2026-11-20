@@ -100,13 +100,16 @@ return function(ctx)
 	local roadLen = roadEnd - z0
 	Kit.part(f, { name = "Road", size = Vector3.new(road, 0.3, roadLen), cf = CFrame.new(0, 0.15, z0 + roadLen / 2), color = ASPHALT, material = Enum.Material.Asphalt })
 	Kit.cylinder(f, { name = "CulDeSac", height = 0.3, diameter = ctx.nestRadius * 2 + 34, cf = CFrame.new(nest.X, 0.15, nest.Z), color = ASPHALT, material = Enum.Material.Asphalt })
-	for i = 0, math.floor(roadLen / 10) - 1 do
+	for i = 0, math.floor((nest.Z - (ctx.nestRadius + 17) - z0) / 10) - 1 do
 		Kit.part(f, { name = "Dash", size = Vector3.new(0.6, 0.32, 5), cf = CFrame.new(0, 0.16, z0 + 5 + i * 10), color = { 250, 210, 60 }, material = Enum.Material.SmoothPlastic })
 	end
+	-- sidewalks stop where the cul-de-sac circle begins
+	local culR = ctx.nestRadius + 17
+	local walkLen = (nest.Z - math.sqrt(culR * culR - (road / 2 + 6) ^ 2)) - z0
 	for side = -1, 1, 2 do
 		local x = side * (road / 2 + 3)
-		Kit.part(f, { name = "Sidewalk", size = Vector3.new(6, 0.6, roadLen - 4), cf = CFrame.new(x, 0.3, z0 + (roadLen - 4) / 2), color = SIDEWALK, material = Enum.Material.Concrete })
-		Kit.part(f, { name = "Curb", size = Vector3.new(0.6, 0.7, roadLen - 4), cf = CFrame.new(side * (road / 2 + 0.3), 0.35, z0 + (roadLen - 4) / 2), color = { 170, 170, 165 }, material = Enum.Material.Concrete })
+		Kit.part(f, { name = "Sidewalk", size = Vector3.new(6, 0.6, walkLen), cf = CFrame.new(x, 0.3, z0 + walkLen / 2), color = SIDEWALK, material = Enum.Material.Concrete })
+		Kit.part(f, { name = "Curb", size = Vector3.new(0.6, 0.7, walkLen), cf = CFrame.new(side * (road / 2 + 0.3), 0.35, z0 + walkLen / 2), color = { 170, 170, 165 }, material = Enum.Material.Concrete })
 	end
 
 	-- houses along both sides, facing the road

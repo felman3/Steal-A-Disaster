@@ -32,6 +32,7 @@ local points = {} -- [zoneIndex] = { { pos, entity, respawnAt } }
 local entities = {} -- [uid] = entity
 local nextUid = 0
 local random = Random.new()
+local WORLD_CORE_SCALE = 1.6
 
 local function rng()
 	return random:NextNumber()
@@ -56,7 +57,7 @@ local function coreLabel(entity)
 	local rarity = Config.Rarities[def.rarity]
 	local zone = Config.Zones[entity.zoneIndex]
 	local root = entity.model.PrimaryPart
-	local bb = Kit.billboard(root, { name = "CoreLabel", size = UDim2.new(0, 200, 0, 78), offset = Vector3.new(0, 3.4, 0), maxDistance = 90 })
+	local bb = Kit.billboard(root, { name = "CoreLabel", size = UDim2.new(0, 200, 0, 78), offset = Vector3.new(0, 4.8, 0), maxDistance = 90 })
 	bb:SetAttribute("ReqSpeed", zone.speedReq)
 	local mutText = ""
 	if entity.mutation then
@@ -73,7 +74,7 @@ local function coreLabel(entity)
 end
 
 local function spawnModel(entity)
-	local m = CoreModels.build(entity.coreId, entity.mutation)
+	local m = CoreModels.build(entity.coreId, entity.mutation, WORLD_CORE_SCALE)
 	m:PivotTo(CFrame.new(entity.position))
 	m:SetAttribute("Uid", entity.uid)
 	m:SetAttribute("Zone", entity.zoneIndex)

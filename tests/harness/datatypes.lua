@@ -264,8 +264,20 @@ CF.__tostring = function(c)
 	return string.format("CFrame(%g, %g, %g)", c.px, c.py, c.pz)
 end
 function CF.Inverse(c)
-	-- transpose rotation
-	local r00, r01, r02, r10, r11, r12, r20, r21, r22 = c.r00, c.r10, c.r20, c.r01, c.r11, c.r21, c.r02, c.r12, c.r22
+	-- general 3x3 inverse (not just transpose) so accumulated float drift can
+	-- never compound; Roblox keeps CFrames orthonormal, so the result matches
+	local a, b, cc = c.r00, c.r01, c.r02
+	local d, e, f = c.r10, c.r11, c.r12
+	local g, h, i = c.r20, c.r21, c.r22
+	local A, B, C = e * i - f * h, -(d * i - f * g), d * h - e * g
+	local det = a * A + b * B + cc * C
+	if det == 0 then
+		det = 1
+	end
+	local inv = 1 / det
+	local r00, r01, r02 = A * inv, -(b * i - cc * h) * inv, (b * f - cc * e) * inv
+	local r10, r11, r12 = B * inv, (a * i - cc * g) * inv, -(a * f - cc * d) * inv
+	local r20, r21, r22 = C * inv, -(a * h - b * g) * inv, (a * e - b * d) * inv
 	local x = -(r00 * c.px + r01 * c.py + r02 * c.pz)
 	local y = -(r10 * c.px + r11 * c.py + r12 * c.pz)
 	local z = -(r20 * c.px + r21 * c.py + r22 * c.pz)

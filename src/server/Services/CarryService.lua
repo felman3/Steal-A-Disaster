@@ -97,10 +97,9 @@ function CarryService:_rebuildVisuals(player)
 		return
 	end
 	for i, it in ipairs(st.items) do
-		local m = CoreModels.build(it.coreId, it.mutation)
+		local m = CoreModels.build(it.coreId, it.mutation, 0.9)
 		m.Name = "CarriedCore"
-		m:ScaleTo(0.8)
-		m:PivotTo(hrp.CFrame * CFrame.new(0, 4.2 + (i - 1) * 2.6, 0))
+		m:PivotTo(hrp.CFrame * CFrame.new(0, 4.4 + (i - 1) * 2.8, 0))
 		Kit.setCollide(m, false)
 		Kit.setMassless(m)
 		Kit.setAnchored(m, false)

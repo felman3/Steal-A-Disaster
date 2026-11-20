@@ -1334,7 +1334,23 @@ function Methods.TranslateBy(self, v)
 	Methods.PivotTo(self, Methods.GetPivot(self) + v)
 end
 function Methods.ScaleTo(self, s)
-	state[self].scale = s
+	if type(s) ~= "number" or s <= 0 then
+		error("ScaleTo expects a positive number", 2)
+	end
+	local st = state[self]
+	local factor = s / (st.scale or 1)
+	st.scale = s
+	if factor == 1 then
+		return
+	end
+	local pivot = Methods.GetPivot(self)
+	for _, p in ipairs(partsOf(self)) do
+		local pst = state[p]
+		local rel = pivot:ToObjectSpace(pst.props.CFrame)
+		local relPos = rel.Position * factor
+		M.setProp(p, "CFrame", pivot * (rel.Rotation + relPos))
+		M.setProp(p, "Size", pst.props.Size * factor)
+	end
 end
 function Methods.GetScale(self)
 	return state[self].scale or 1

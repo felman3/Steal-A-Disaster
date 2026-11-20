@@ -100,8 +100,7 @@ function IncubatorService:_buildVisual(player, pod)
 		return
 	end
 	visuals[player] = visuals[player] or {}
-	local m = CoreModels.build(pod.c, pod.m)
-	m:ScaleTo(0.85)
+	local m = CoreModels.build(pod.c, pod.m, 1.1)
 	m:PivotTo(unit.anchor)
 	m:AddTag("Animated")
 	m.Parent = unit.model
