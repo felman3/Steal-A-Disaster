@@ -220,9 +220,10 @@ function Kit.text(parent, o)
 	t.TextStrokeColor3 = rgb(o.strokeColor or { 20, 20, 30 })
 	t.TextStrokeTransparency = o.stroke == false and 1 or 0
 	t.Font = o.font or Enum.Font.FredokaOne
+	-- TextWrapped must be set before TextScaled: in Roblox, TextWrapped = false turns TextScaled off.
+	t.TextWrapped = o.wrapped == true
 	t.TextScaled = o.scaled ~= false
 	t.TextSize = o.textSize or 24
-	t.TextWrapped = o.wrapped == true
 	t.TextXAlignment = o.xAlign or Enum.TextXAlignment.Center
 	t.RichText = o.rich == true
 	t.ZIndex = o.z or 1

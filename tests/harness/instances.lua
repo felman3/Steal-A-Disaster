@@ -1669,6 +1669,13 @@ InstMt.__newindex = function(inst, key, value)
 	end
 	st.props[key] = (value == nil) and NIL or value
 	propChanged(inst, st, key)
+	-- Real engine coupling (verified in Studio): TextScaled = true forces TextWrapped = true,
+	-- and TextWrapped = false forces TextScaled = false.
+	if key == "TextScaled" and value == true then
+		st.props.TextWrapped = true
+	elseif key == "TextWrapped" and value == false then
+		st.props.TextScaled = false
+	end
 	if key == "Health" and st.className == "Humanoid" and value <= 0 and not st.died then
 		st.died = true
 		signal(st, "Died"):Fire()

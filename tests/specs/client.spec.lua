@@ -35,6 +35,17 @@ describe("client HUD", function()
 		expect(screen:FindFirstChild("ShopPanel").Visible).toBe(false)
 	end)
 
+	it("HUD and world text stay TextScaled (Roblox resets it when TextWrapped is set false)", function()
+		local env, S, player = boot()
+		local screen = hud(player)
+		expect(screen.Money.Amount.TextScaled).toBe(true)
+		expect(screen.SpeedBox.Speed.TextScaled).toBe(true)
+		local gate = env.G.workspace.World.Zones.Suburb.Gate.Header.GateGui
+		expect(gate.ZoneName.TextScaled).toBe(true)
+		expect(gate.Requirement.TextScaled).toBe(true)
+		noErrors(env)
+	end)
+
 	it("money and speed follow server sync", function()
 		local env, S, player = boot()
 		local data = S.PlayerDataService:get(player)

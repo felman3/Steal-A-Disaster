@@ -70,9 +70,10 @@ function Theme.label(parent, o)
 	t.Font = o.font or Theme.FontBold
 	t.Text = o.text or ""
 	t.TextColor3 = o.color or Theme.White
+	-- TextWrapped must be set before TextScaled: in Roblox, TextWrapped = false turns TextScaled off.
+	t.TextWrapped = o.wrapped == true
 	t.TextScaled = o.scaled ~= false
 	t.TextSize = o.textSize or 24
-	t.TextWrapped = o.wrapped == true
 	t.TextXAlignment = o.xAlign or Enum.TextXAlignment.Center
 	t.TextYAlignment = o.yAlign or Enum.TextYAlignment.Center
 	t.RichText = o.rich == true
