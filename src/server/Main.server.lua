@@ -23,6 +23,7 @@ local ORDER = {
 	"GuardianService",
 	"UpgradeService",
 	"MonetizationService", -- Game Passes + Developer Products (ProcessReceipt)
+	"TravelService", -- Quick Travel (HOME / STEAL / TRAIN / ZONES)
 	"DevService", -- Studio-only chat commands
 }
 

@@ -19,6 +19,7 @@ Remotes.Events = {
 	-- client -> server
 	"RequestUpgrade", -- (upgradeId)
 	"RequestShield", -- ()
+	"RequestTravel", -- (destination, zoneIndex?) Quick Travel; validated by TravelService
 	"RequestPurchase", -- (itemKey, podSlot?) only opens the Roblox purchase prompt; grants happen in ProcessReceipt
 }
 

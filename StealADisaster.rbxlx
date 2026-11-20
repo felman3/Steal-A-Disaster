@@ -2,7 +2,7 @@
 <External>null</External><External>nil</External>
 <Item class="Workspace" referent="RBX00000000"><Properties><string name="Name">Workspace</string><bool name="StreamingEnabled">false</bool><float name="Gravity">196.2</float></Properties></Item>
 <Item class="Lighting" referent="RBX00000001"><Properties><string name="Name">Lighting</string><token name="Technology">4</token><float name="Brightness">2.4</float><float name="ClockTime">14.2</float><bool name="GlobalShadows">true</bool></Properties></Item>
-<Item class="ReplicatedStorage" referent="RBX0000001A"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX00000019"><Properties><string name="Name">Shared</string></Properties><Item class="Folder" referent="RBX00000004"><Properties><string name="Name">Config</string></Properties><Item class="ModuleScript" referent="RBX00000002"><Properties><string name="Name">GameConfig</string><ProtectedString name="Source"><![CDATA[--[[
+<Item class="ReplicatedStorage" referent="RBX0000001B"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX0000001A"><Properties><string name="Name">Shared</string></Properties><Item class="Folder" referent="RBX00000004"><Properties><string name="Name">Config</string></Properties><Item class="ModuleScript" referent="RBX00000002"><Properties><string name="Name">GameConfig</string><ProtectedString name="Source"><![CDATA[--[[
 	GameConfig — single source of truth for content and balance.
 
 	Pure data (no Roblox types) so it can be loaded by the headless test runner.
@@ -511,7 +511,7 @@ MonetizationConfig.BoostSpeedBonus = 1
 MonetizationConfig.DoubleCashMult = 2
 
 return MonetizationConfig
-]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX00000010"><Properties><string name="Name">Logic</string></Properties><Item class="ModuleScript" referent="RBX00000005"><Properties><string name="Name">CarryLogic</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX00000011"><Properties><string name="Name">Logic</string></Properties><Item class="ModuleScript" referent="RBX00000005"><Properties><string name="Name">CarryLogic</string><ProtectedString name="Source"><![CDATA[--[[
 	CarryLogic — weight, slowdown, capacity, teleport heuristics.
 ]]
 
@@ -1237,7 +1237,91 @@ function SpeedLogic.tickSteps(state, dt, running)
 end
 
 return SpeedLogic
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000E"><Properties><string name="Name">UpgradeLogic</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000E"><Properties><string name="Name">TravelLogic</string><ProtectedString name="Source"><![CDATA[--[[
+	TravelLogic — pure rules for Quick Travel (HOME / STEAL / TRAIN / ZONES).
+
+	Travel never skips progression: a zone is a valid destination only when the
+	player's Speed lets them steal there, and nobody may travel while carrying a
+	core (that would skip the run home).
+]]
+
+local Config = require(script.Parent.Parent.Config.GameConfig)
+local SpeedLogic = require(script.Parent.SpeedLogic)
+local WorldLayout = require(script.Parent.WorldLayout)
+local Util = require(script.Parent.Parent.Util)
+
+local TravelLogic = {}
+
+TravelLogic.COOLDOWN = 4 -- seconds between trips (server-enforced)
+TravelLogic.ENTRANCE_DEPTH = 14 -- studs inside a zone gate
+TravelLogic.SPOT_OFFSETS = { 0, 5, -5, 9, -9 } -- sideways tries to avoid other players
+TravelLogic.CLEAR_RADIUS = 4 -- min distance to another player's root
+
+TravelLogic.Destinations = { Home = true, Steal = true, Train = true, Zone = true }
+
+-- Highest zone the player may steal in (always at least 1).
+function TravelLogic.stealZone(speed)
+	return SpeedLogic.highestUnlockedZone(speed or 0)
+end
+
+function TravelLogic.zoneUnlocked(speed, index)
+	index = tonumber(index)
+	if not index or index ~= math.floor(index) or not Config.Zones[index] then
+		return false
+	end
+	return SpeedLogic.canStealInZone(speed or 0, index)
+end
+
+-- Just inside a zone gate, on the clear central corridor. Returns {x, y, z}.
+function TravelLogic.zoneEntrance(index)
+	return { 0, 4, WorldLayout.zoneStartZ(index) + TravelLogic.ENTRANCE_DEPTH }
+end
+
+-- Validate a request. Returns ok, reason (reason is player-facing on failure).
+-- `now` and `readyAt` are seconds; `carrying` is the number of carried cores.
+function TravelLogic.check(dest, arg, speed, carrying, now, readyAt)
+	if type(dest) ~= "string" or not TravelLogic.Destinations[dest] then
+		return false, "Unknown destination."
+	end
+	if (carrying or 0) > 0 then
+		return false, "You can't fast-travel while carrying a core — run it home!"
+	end
+	if readyAt and now < readyAt then
+		return false, "Travel ready in " .. math.ceil(readyAt - now) .. "s."
+	end
+	if dest == "Zone" and not TravelLogic.zoneUnlocked(speed, arg) then
+		local zone = Config.Zones[tonumber(arg) or 0]
+		if zone then
+			return false, zone.name .. " is locked — reach ⚡" .. Util.formatNumber(zone.speedReq) .. " Speed first."
+		end
+		return false, "Unknown zone."
+	end
+	return true, nil
+end
+
+-- Pick the first spot (base point shifted sideways by SPOT_OFFSETS) that is at
+-- least CLEAR_RADIUS from every position in `others` ({x, z} pairs).
+-- `side` is the unit sideways direction {x, z}. Returns the offset used.
+function TravelLogic.clearOffset(base, side, others)
+	for _, off in ipairs(TravelLogic.SPOT_OFFSETS) do
+		local x = base[1] + side[1] * off
+		local z = base[3] + side[2] * off
+		local free = true
+		for _, o in ipairs(others or {}) do
+			if (o[1] - x) ^ 2 + (o[2] - z) ^ 2 < TravelLogic.CLEAR_RADIUS ^ 2 then
+				free = false
+				break
+			end
+		end
+		if free then
+			return off
+		end
+	end
+	return TravelLogic.SPOT_OFFSETS[1]
+end
+
+return TravelLogic
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000F"><Properties><string name="Name">UpgradeLogic</string><ProtectedString name="Source"><![CDATA[--[[
 	UpgradeLogic — costs and application of base upgrades (pure, data-only).
 ]]
 
@@ -1302,7 +1386,7 @@ function UpgradeLogic.shieldDuration(level)
 end
 
 return UpgradeLogic
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000F"><Properties><string name="Name">WorldLayout</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000010"><Properties><string name="Name">WorldLayout</string><ProtectedString name="Source"><![CDATA[--[[
 	WorldLayout — pure geometry for the map. Both the MapBuilder and the
 	gameplay services use this so positions never drift apart.
 	All positions are {x, y, z} arrays.
@@ -1420,7 +1504,7 @@ function WorldLayout.shieldButtonPosition(slotIndex)
 end
 
 return WorldLayout
-]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX00000015"><Properties><string name="Name">Models</string></Properties><Item class="ModuleScript" referent="RBX00000011"><Properties><string name="Name">CoreModels</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX00000016"><Properties><string name="Name">Models</string></Properties><Item class="ModuleScript" referent="RBX00000012"><Properties><string name="Name">CoreModels</string><ProtectedString name="Source"><![CDATA[--[[
 	CoreModels — builds the Disaster Core collectibles (the "eggs").
 
 	Every core shares a readable silhouette — a glowing heart inside a
@@ -1704,7 +1788,7 @@ function CoreModels.build(coreId, mutationId, sizeMult)
 end
 
 return CoreModels
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000012"><Properties><string name="Name">DisasterModels</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000013"><Properties><string name="Name">DisasterModels</string><ProtectedString name="Source"><![CDATA[--[[
 	DisasterModels — builds the hatched disaster collectibles that sit on the
 	display pedestals.
 
@@ -2994,7 +3078,7 @@ function DisasterModels.build(disasterId, mutationId)
 end
 
 return DisasterModels
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000013"><Properties><string name="Name">GuardianModels</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000014"><Properties><string name="Name">GuardianModels</string><ProtectedString name="Source"><![CDATA[--[[
 	GuardianModels — builds the big zone guardians that patrol each core nest.
 
 	One builder per `GameConfig.Zones[i].guardian.kind`: Hound (topiary hedge
@@ -3564,7 +3648,7 @@ function GuardianModels.kinds()
 end
 
 return GuardianModels
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000014"><Properties><string name="Name">Kit</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000015"><Properties><string name="Name">Kit</string><ProtectedString name="Source"><![CDATA[--[[
 	Kit — part-construction helpers shared by the world builders and model
 	factories. Everything is plain Parts (no external assets), so the whole game
 	builds from source.
@@ -3798,7 +3882,7 @@ function Kit.text(parent, o)
 end
 
 return Kit
-]]></ProtectedString></Properties></Item></Item><Item class="ModuleScript" referent="RBX00000016"><Properties><string name="Name">Remotes</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item></Item><Item class="ModuleScript" referent="RBX00000017"><Properties><string name="Name">Remotes</string><ProtectedString name="Source"><![CDATA[--[[
 	Remotes — the complete list of network endpoints. The server creates them,
 	clients wait for them. Clients only ever send *intents*; every effect is
 	validated on the server.
@@ -3819,6 +3903,7 @@ Remotes.Events = {
 	-- client -> server
 	"RequestUpgrade", -- (upgradeId)
 	"RequestShield", -- ()
+	"RequestTravel", -- (destination, zoneIndex?) Quick Travel; validated by TravelService
 	"RequestPurchase", -- (itemKey, podSlot?) only opens the Roblox purchase prompt; grants happen in ProcessReceipt
 }
 
@@ -3857,7 +3942,7 @@ function Remotes.get(name)
 end
 
 return Remotes
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000017"><Properties><string name="Name">Signal</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000018"><Properties><string name="Name">Signal</string><ProtectedString name="Source"><![CDATA[--[[
 	Signal — tiny synchronous signal for server-side service events.
 	Handlers run in order; an erroring handler is reported and does not stop the rest.
 ]]
@@ -3896,7 +3981,7 @@ function Signal:Fire(...)
 end
 
 return Signal
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000018"><Properties><string name="Name">Util</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000019"><Properties><string name="Name">Util</string><ProtectedString name="Source"><![CDATA[--[[
 	Util — small pure helpers shared by server, client and tests.
 ]]
 
@@ -4009,7 +4094,7 @@ end
 
 return Util
 ]]></ProtectedString></Properties></Item></Item></Item>
-<Item class="ServerScriptService" referent="RBX0000003B"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX0000003A"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX0000001B"><Properties><string name="Name">Main</string><bool name="Disabled">false</bool><token name="RunContext">0</token><ProtectedString name="Source"><![CDATA[--[[
+<Item class="ServerScriptService" referent="RBX0000003D"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX0000003C"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX0000001C"><Properties><string name="Name">Main</string><bool name="Disabled">false</bool><token name="RunContext">0</token><ProtectedString name="Source"><![CDATA[--[[
 	Server bootstrap. Builds the world, then initializes and starts every
 	service in dependency order. Services get the registry `S` in Init so they
 	can call each other (S.CarryService:drop(...), etc.).
@@ -4034,6 +4119,7 @@ local ORDER = {
 	"GuardianService",
 	"UpgradeService",
 	"MonetizationService", -- Game Passes + Developer Products (ProcessReceipt)
+	"TravelService", -- Quick Travel (HOME / STEAL / TRAIN / ZONES)
 	"DevService", -- Studio-only chat commands
 }
 
@@ -4065,7 +4151,7 @@ end
 -- expose for the headless integration tests / Studio command bar debugging
 _G.StealADisaster = S
 print("[Steal a Disaster] server ready")
-]]></ProtectedString></Properties></Item><Item class="Folder" referent="RBX0000002B"><Properties><string name="Name">Services</string></Properties><Item class="ModuleScript" referent="RBX0000001C"><Properties><string name="Name">BaseService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="Folder" referent="RBX0000002D"><Properties><string name="Name">Services</string></Properties><Item class="ModuleScript" referent="RBX0000001D"><Properties><string name="Name">BaseService</string><ProtectedString name="Source"><![CDATA[--[[
 	BaseService — base assignment, spawning, base visuals, and base protection.
 
 	* Every slot's base is built once at startup; joining players claim the
@@ -4436,7 +4522,7 @@ function BaseService:Start()
 end
 
 return BaseService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000001D"><Properties><string name="Name">CarryService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000001E"><Properties><string name="Name">CarryService</string><ProtectedString name="Source"><![CDATA[--[[
 	CarryService — everything about cores in transit.
 
 	An item is either
@@ -4766,7 +4852,7 @@ function CarryService:Start()
 end
 
 return CarryService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000001E"><Properties><string name="Name">CoreSpawnService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000001F"><Properties><string name="Name">CoreSpawnService</string><ProtectedString name="Source"><![CDATA[--[[
 	CoreSpawnService — the world's temporary Disaster Core opportunities.
 
 	Each zone has a nest with N spawn points. A point holds at most one core
@@ -5055,7 +5141,7 @@ function CoreSpawnService:Start()
 end
 
 return CoreSpawnService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000001F"><Properties><string name="Name">DevService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000020"><Properties><string name="Name">DevService</string><ProtectedString name="Source"><![CDATA[--[[
 	DevService — Studio-only test commands (disabled in live servers).
 
 	Type in chat while play-testing in Studio:
@@ -5155,7 +5241,7 @@ function DevService:Start()
 end
 
 return DevService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000020"><Properties><string name="Name">DisasterCollectionService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000021"><Properties><string name="Name">DisasterCollectionService</string><ProtectedString name="Source"><![CDATA[--[[
 	DisasterCollectionService — hatched disasters on display pedestals.
 
 	place(player, pod) turns a finished pod into a disaster on the first free
@@ -5373,7 +5459,7 @@ function DisasterCollectionService:Start()
 end
 
 return DisasterCollectionService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000021"><Properties><string name="Name">EconomyService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000022"><Properties><string name="Name">EconomyService</string><ProtectedString name="Source"><![CDATA[--[[
 	EconomyService — passive income and all money mutations.
 
 	Income is paid once per second from the disasters on display. All money
@@ -5487,7 +5573,7 @@ function EconomyService:Start()
 end
 
 return EconomyService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000022"><Properties><string name="Name">EventService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000023"><Properties><string name="Name">EventService</string><ProtectedString name="Source"><![CDATA[--[[
 	EventService — the 5-minute world refresh and the 10-second Chaos Frenzy.
 
 	Timeline (EventLogic): Normal → Warning (last 30 s) → refresh + Frenzy (10 s).
@@ -5615,7 +5701,7 @@ function EventService:Start()
 end
 
 return EventService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000023"><Properties><string name="Name">GuardianService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000024"><Properties><string name="Name">GuardianService</string><ProtectedString name="Source"><![CDATA[--[[
 	GuardianService — one guardian per zone protecting its nest.
 
 	State machine (server-side, anchored models moved by PivotTo):
@@ -5913,7 +5999,7 @@ function GuardianService:Start()
 end
 
 return GuardianService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000024"><Properties><string name="Name">IncubatorService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000025"><Properties><string name="Name">IncubatorService</string><ProtectedString name="Source"><![CDATA[--[[
 	IncubatorService — pods at each base turn cores into disasters.
 
 	* receive(player, entry) puts a delivered core into the first free pod, or
@@ -6374,7 +6460,7 @@ function IncubatorService:_transit()
 end
 
 return IncubatorService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000025"><Properties><string name="Name">MonetizationService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000026"><Properties><string name="Name">MonetizationService</string><ProtectedString name="Source"><![CDATA[--[[
 	MonetizationService — Game Passes and Developer Products (server only).
 
 	Developer Products are granted ONLY in MarketplaceService.ProcessReceipt:
@@ -6708,7 +6794,7 @@ function MonetizationService:_pendingHatch()
 end
 
 return MonetizationService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000026"><Properties><string name="Name">PlayerDataService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000027"><Properties><string name="Name">PlayerDataService</string><ProtectedString name="Source"><![CDATA[--[[
 	PlayerDataService — loading, saving and syncing player data.
 
 	* DataStore UpdateAsync with retries and a soft session lock (another server
@@ -7101,7 +7187,7 @@ function PlayerDataService:_sessions()
 end
 
 return PlayerDataService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000027"><Properties><string name="Name">SpeedService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000028"><Properties><string name="Name">SpeedService</string><ProtectedString name="Source"><![CDATA[--[[
 	SpeedService — treadmill training and WalkSpeed.
 
 	Steps are counted on the server only: a player earns steps while their root
@@ -7249,7 +7335,7 @@ function SpeedService:Start()
 end
 
 return SpeedService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000028"><Properties><string name="Name">StealService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000029"><Properties><string name="Name">StealService</string><ProtectedString name="Source"><![CDATA[--[[
 	StealService — validates every steal attempt on the server.
 
 	tryStealWorld(player, entity)       from a zone nest (ProximityPrompt)
@@ -7400,7 +7486,123 @@ function StealService:tryStealFromBase(thief, slot, podSlot)
 end
 
 return StealService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000029"><Properties><string name="Name">UpgradeService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000002A"><Properties><string name="Name">TravelService</string><ProtectedString name="Source"><![CDATA[--[[
+	TravelService — server-validated Quick Travel.
+
+	Destinations: Home (own base spawn), Train (behind own treadmill), Steal
+	(entrance of the highest zone the player can steal in), Zone n (any zone
+	the player has unlocked). Every request is checked here: data loaded,
+	alive, not carrying (no skipping the run home), cooldown, and progression.
+	The landing spot is a fixed safe point (open corridor / base floor), shifted
+	sideways to avoid other players. The carry anti-teleport tracker is reset.
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config.GameConfig)
+local TravelLogic = require(Shared.Logic.TravelLogic)
+local RateLimiter = require(Shared.Logic.RateLimiter)
+local Remotes = require(Shared.Remotes)
+
+local TravelService = { Name = "TravelService" }
+
+local S
+local limiter
+local readyAt = {} -- [player] = os.clock() when the next trip is allowed
+
+function TravelService:Init(registry)
+	S = registry
+	limiter = RateLimiter.new(2, 4)
+end
+
+local function otherRoots(player)
+	local out = {}
+	for _, p in ipairs(Players:GetPlayers()) do
+		local hrp = p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			table.insert(out, { hrp.Position.X, hrp.Position.Z })
+		end
+	end
+	return out
+end
+
+-- Shift `cf` sideways (its RightVector) to the first spot clear of other players.
+local function clearSpot(player, cf)
+	local p = cf.Position
+	local r = cf.RightVector
+	local off = TravelLogic.clearOffset({ p.X, p.Y, p.Z }, { r.X, r.Z }, otherRoots(player))
+	return cf + r * off
+end
+
+function TravelService:destination(player, dest, arg)
+	local data = S.PlayerDataService:get(player)
+	local slot = S.BaseService:slotOf(player)
+	if dest == "Home" then
+		if not slot then
+			return nil
+		end
+		return S.BaseService:spawnCFrame(slot) + Vector3.new(0, 1, 0), "your base"
+	elseif dest == "Train" then
+		local base = slot and S.BaseService:base(slot)
+		if not base then
+			return nil
+		end
+		-- just off the back end of the belt, facing the console: walk forward to train
+		local frame = base.treadmill.frame
+		local pos = (frame * CFrame.new(-11.5, 3.5, 0)).Position
+		return CFrame.lookAt(pos, pos + frame.RightVector), "your treadmill"
+	end
+	local index = (dest == "Steal") and TravelLogic.stealZone(data.speed) or tonumber(arg)
+	local p = TravelLogic.zoneEntrance(index)
+	local pos = Vector3.new(p[1], p[2], p[3])
+	return CFrame.lookAt(pos, pos + Vector3.new(0, 0, 1)), Config.Zones[index].name
+end
+
+-- Returns ok, message.
+function TravelService:request(player, dest, arg)
+	if not limiter:allow(player) then
+		return false, nil
+	end
+	local data = S.PlayerDataService:get(player)
+	local char = player.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if not data or not hrp or not hum or hum.Health <= 0 then
+		return false, nil
+	end
+	local ok, reason = TravelLogic.check(dest, arg, data.speed, S.CarryService:count(player), os.clock(), readyAt[player])
+	if not ok then
+		return false, reason
+	end
+	local cf, label = self:destination(player, dest, arg)
+	if not cf then
+		return false, "You don't have a base yet."
+	end
+	cf = clearSpot(player, cf)
+	S.CarryService:resetTracking(player)
+	char:PivotTo(cf)
+	hrp.AssemblyLinearVelocity = Vector3.zero
+	readyAt[player] = os.clock() + TravelLogic.COOLDOWN
+	player:SetAttribute("TravelReadyAt", workspace:GetServerTimeNow() + TravelLogic.COOLDOWN)
+	return true, label
+end
+
+function TravelService:Start()
+	Remotes.get("RequestTravel").OnServerEvent:Connect(function(player, dest, arg)
+		local ok, msg = self:request(player, dest, arg)
+		if not ok and msg then
+			S.PlayerDataService:notify(player, msg, "error")
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		readyAt[player] = nil
+	end)
+end
+
+return TravelService
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000002B"><Properties><string name="Name">UpgradeService</string><ProtectedString name="Source"><![CDATA[--[[
 	UpgradeService — the only way to spend money on progression.
 
 	Client sends RequestUpgrade(upgradeId). The server rate-limits, validates the
@@ -7471,7 +7673,7 @@ function UpgradeService:Start()
 end
 
 return UpgradeService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000002A"><Properties><string name="Name">ZoneService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000002C"><Properties><string name="Name">ZoneService</string><ProtectedString name="Source"><![CDATA[--[[
 	ZoneService — builds the world and tracks which zone each player is in.
 
 	Player attribute "Zone": 0 = hub/bases, 1..9 = route zone, -1 = out of bounds.
@@ -7558,7 +7760,7 @@ function ZoneService:Start()
 end
 
 return ZoneService
-]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX00000039"><Properties><string name="Name">World</string></Properties><Item class="ModuleScript" referent="RBX0000002C"><Properties><string name="Name">BaseBuilder</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX0000003B"><Properties><string name="Name">World</string></Properties><Item class="ModuleScript" referent="RBX0000002E"><Properties><string name="Name">BaseBuilder</string><ProtectedString name="Source"><![CDATA[--[[
 	BaseBuilder — the physical player base: a "storm shelter lab" on a raised
 	concrete pad with walls on three sides, open front toward the avenue,
 	incubator pods along the back, display pedestals in the middle, a treadmill,
@@ -7816,7 +8018,7 @@ function BaseBuilder.build(parent, slotIndex)
 end
 
 return BaseBuilder
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000002D"><Properties><string name="Name">MapBuilder</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000002F"><Properties><string name="Name">MapBuilder</string><ProtectedString name="Source"><![CDATA[--[[
 	MapBuilder — builds the static world from config at server start:
 	lighting baseline, the starting hub (Storm Research Plaza), the long central
 	route with a gate arch per zone, a nest per zone and boundaries.
@@ -8267,7 +8469,7 @@ function MapBuilder.build()
 end
 
 return MapBuilder
-]]></ProtectedString></Properties></Item><Item class="Folder" referent="RBX00000038"><Properties><string name="Name">Zones</string></Properties><Item class="ModuleScript" referent="RBX0000002E"><Properties><string name="Name">DeepAbyss</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="Folder" referent="RBX0000003A"><Properties><string name="Name">Zones</string></Properties><Item class="ModuleScript" referent="RBX00000030"><Properties><string name="Name">DeepAbyss</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 6 — Deep Abyss. The ocean drained out of this trench long ago and
 	forgot to take the pressure with it: a dark slate-and-sand seabed between
 	towering rock walls, branching coral that still glows at the tips, giant
@@ -8706,7 +8908,7 @@ return function(ctx)
 		},
 	}
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000002F"><Properties><string name="Name">Droughtlands</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000031"><Properties><string name="Name">Droughtlands</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 3 — Droughtlands. "Nothing grows. Everything cracks."
 	A sun-baked clay pan split by dark crack lines (a few still glowing with
 	trapped heat), a dry riverbed snaking across the route, banded sandstone
@@ -9140,7 +9342,7 @@ return function(ctx)
 		},
 	}
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000030"><Properties><string name="Name">Frostfall</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000032"><Properties><string name="Name">Frostfall</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 4 — Frostfall. "The cold bites back."
 	A snowbound pass: packed-snow trail over deep snow with glacier and ice
 	sheets, wind-carved drifts banked against the walls, snow-capped pines,
@@ -9563,7 +9765,7 @@ return function(ctx)
 		},
 	}
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000031"><Properties><string name="Name">Generic</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000033"><Properties><string name="Name">Generic</string><ProtectedString name="Source"><![CDATA[--[[
 	Generic fallback zone builder: used only when a zone has no dedicated
 	builder in World/Zones/<ZoneId>.lua. Gives each zone a distinct ground
 	material/color and simple props so the route is always playable.
@@ -9597,7 +9799,7 @@ return function(ctx)
 	end
 	return { palette = { accent = pal.accent, gate = Kit.shade(pal.ground, 0.6), nest = Kit.shade(pal.ground, 0.7) } }
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000032"><Properties><string name="Name">MagmaBasin</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000034"><Properties><string name="Name">MagmaBasin</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 5 — Magma Basin. "The ground is the disaster."
 	A scorched basin of basalt and cracked lava rock: a glowing lava river
 	cuts across the route under a dark basalt bridge, lava pools simmer at
@@ -10043,7 +10245,7 @@ return function(ctx)
 		},
 	}
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000033"><Properties><string name="Name">Overgrowth</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000035"><Properties><string name="Name">Overgrowth</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 2 — Overgrowth. "Nature fights back."
 	An ancient stone road swallowed by the forest: a muddy trail over broken
 	cobbles, giant spotted mushrooms (some glowing underneath), crumbling ruin
@@ -10543,7 +10745,7 @@ return function(ctx)
 		},
 	}
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000034"><Properties><string name="Name">Prehistoric</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000036"><Properties><string name="Name">Prehistoric</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 7 — Prehistoric. A steaming jungle that time forgot: mud trails
 	through fern-choked clearings, umbrella-crowned conifers, stubby cycads,
 	bubbling tar pits and layered stone ridges. The route runs straight under
@@ -10985,7 +11187,7 @@ return function(ctx)
 		},
 	}
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000035"><Properties><string name="Name">Skylands</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000037"><Properties><string name="Name">Skylands</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 8 — Skylands. Floating islands adrift on a sea of cloud, where storms
 	are born. The route is a long grassy island with rocky cliffs underneath;
 	side islands hang at different heights with waterfalls pouring into the
@@ -11346,7 +11548,7 @@ return function(ctx)
 		},
 	}
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000036"><Properties><string name="Name">Suburb</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000038"><Properties><string name="Name">Suburb</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 1 — Suburb. A quiet cul-de-sac that's clearly been through some
 	weather: pastel houses, picket fences, a road that loops around the core
 	nest, a tornado-flattened backyard behind it.
@@ -11539,7 +11741,7 @@ return function(ctx)
 		},
 	}
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000037"><Properties><string name="Name">VoidRealm</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000039"><Properties><string name="Name">VoidRealm</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 9 — Void Realm. The end of the route, where disasters go to die: a
 	black obsidian plain split by glowing purple fissures, monoliths humming
 	with light, vertical rifts torn in the air, and shattered fragments of
@@ -11854,7 +12056,7 @@ return function(ctx)
 	}
 end
 ]]></ProtectedString></Properties></Item></Item></Item></Item></Item>
-<Item class="StarterPlayer" referent="RBX00000047"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX00000046"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX00000045"><Properties><string name="Name">Client</string></Properties><Item class="LocalScript" referent="RBX0000003C"><Properties><string name="Name">Main</string><bool name="Disabled">false</bool><ProtectedString name="Source"><![CDATA[--[[
+<Item class="StarterPlayer" referent="RBX0000004A"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX00000049"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX00000048"><Properties><string name="Name">Client</string></Properties><Item class="LocalScript" referent="RBX0000003E"><Properties><string name="Name">Main</string><bool name="Disabled">false</bool><ProtectedString name="Source"><![CDATA[--[[
 	Client bootstrap: HUD, panels, announcer, world presentation.
 	The client only renders state and sends intents; all logic is on the server.
 ]]
@@ -11872,6 +12074,7 @@ local State = require(Client:WaitForChild("State"))
 local Hud = require(Client:WaitForChild("UI"):WaitForChild("Hud"))
 local Panels = require(Client.UI:WaitForChild("Panels"))
 local Announcer = require(Client.UI:WaitForChild("Announcer"))
+local QuickTravel = require(Client.UI:WaitForChild("QuickTravel"))
 local WorldFx = require(Client:WaitForChild("World"):WaitForChild("WorldFx"))
 
 local player = Players.LocalPlayer
@@ -11911,6 +12114,7 @@ end)
 
 Hud.mount(screen)
 Panels.mount(screen)
+QuickTravel.mount(screen, Panels)
 Announcer.mount(screen)
 WorldFx.mount()
 
@@ -11959,11 +12163,13 @@ UserInputService.InputBegan:Connect(function(input, processed)
 		Panels.toggle("Shop")
 	elseif input.KeyCode == Enum.KeyCode.B then
 		Panels.toggle("Index")
+	elseif input.KeyCode == Enum.KeyCode.M then
+		Panels.toggle("Zones")
 	end
 end)
 
 _G.StealADisasterClient = { State = State, Panels = Panels, Screen = screen }
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000003D"><Properties><string name="Name">State</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000003F"><Properties><string name="Name">State</string><ProtectedString name="Source"><![CDATA[--[[
 	State — the latest server snapshot for the local player.
 ]]
 
@@ -11988,7 +12194,7 @@ function State.get()
 end
 
 return State
-]]></ProtectedString></Properties></Item><Item class="Folder" referent="RBX00000042"><Properties><string name="Name">UI</string></Properties><Item class="ModuleScript" referent="RBX0000003E"><Properties><string name="Name">Announcer</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="Folder" referent="RBX00000045"><Properties><string name="Name">UI</string></Properties><Item class="ModuleScript" referent="RBX00000040"><Properties><string name="Name">Announcer</string><ProtectedString name="Source"><![CDATA[--[[
 	Announcer — big center banners (zone entry, run home, delivered, hatches,
 	events, breaches) and small toasts for notifications.
 ]]
@@ -12164,7 +12370,7 @@ function Announcer.mount(screen)
 end
 
 return Announcer
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000003F"><Properties><string name="Name">Hud</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000041"><Properties><string name="Name">Hud</string><ProtectedString name="Source"><![CDATA[--[[
 	Hud — minimal always-on HUD.
 
 	top-center    money + income/s
@@ -12295,7 +12501,7 @@ function Hud.mount(screen)
 end
 
 return Hud
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000040"><Properties><string name="Name">Panels</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000042"><Properties><string name="Name">Panels</string><ProtectedString name="Source"><![CDATA[--[[
 	Panels — the left navigation and the two modal panels (Shop, Index).
 
 	Compact left column of chunky square buttons; one centered panel at a time
@@ -12662,6 +12868,88 @@ local function buildIndex(screen)
 	return p
 end
 
+-- Zones --------------------------------------------------------------------------
+-- One row per zone, built from GameConfig. Travel buttons only ask the server;
+-- TravelService re-checks the Speed requirement.
+local RARITY_SHORT = { Common = "C", Uncommon = "U", Rare = "R", Epic = "E", Legendary = "L", Mythic = "M" }
+
+local function rarityText(zone)
+	local parts = {}
+	for _, r in ipairs(Config.RarityOrder) do
+		if zone.rarityWeights[r] and zone.rarityWeights[r] > 0 then
+			table.insert(parts, r)
+		end
+	end
+	-- e.g. "Common → Epic" keeps the row short
+	if #parts > 2 then
+		return parts[1] .. " → " .. parts[#parts] .. " cores"
+	end
+	return table.concat(parts, ", ") .. " cores"
+end
+
+local function buildZones(screen)
+	local p, body = makePanel(screen, "ZonesPanel", "🗺 ZONES", Theme.Purple)
+	local list = Instance.new("UIListLayout")
+	list.Padding = UDim.new(0, 8)
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.Parent = body
+	local rows = {}
+	for i, zone in ipairs(Config.Zones) do
+		local row = Theme.frame(body, { name = "Zone" .. i, size = UDim2.new(1, -12, 0, 78), color = Theme.White, corner = 10, order = i, z = 12 })
+		local swatch = Theme.frame(row, { name = "Swatch", size = UDim2.new(0, 58, 0, 58), position = UDim2.new(0, 10, 0.5, 0), anchor = Vector2.new(0, 0.5), color = Theme.rgb(zone.sky.fog), corner = 10, z = 13 })
+		Theme.label(swatch, { name = "Num", text = tostring(i), size = UDim2.new(1, 0, 1, 0), font = Theme.FontDisplay, z = 14, strokeThickness = 2.5 })
+		local name = Theme.label(row, { name = "ZoneName", text = zone.name, size = UDim2.new(0.42, 0, 0.4, 0), position = UDim2.new(0, 78, 0.06, 0), xAlign = Enum.TextXAlignment.Left, color = Theme.Ink, stroke = false, font = Theme.FontDisplay, z = 13 })
+		local req = zone.speedReq > 0 and ("⚡ " .. Util.formatNumber(zone.speedReq) .. " Speed") or "⚡ No Speed needed"
+		local info = Theme.label(row, { name = "Info", text = req .. "  •  " .. rarityText(zone), size = UDim2.new(0.5, 0, 0.26, 0), position = UDim2.new(0, 78, 0.46, 0), xAlign = Enum.TextXAlignment.Left, color = Color3.fromRGB(90, 90, 110), stroke = false, z = 13 })
+		local status = Theme.label(row, { name = "Status", text = "", size = UDim2.new(0.5, 0, 0.22, 0), position = UDim2.new(0, 78, 0.73, 0), xAlign = Enum.TextXAlignment.Left, color = Theme.Green, stroke = false, z = 13 })
+		local travel = Theme.button(row, {
+			name = "Travel",
+			text = "TRAVEL",
+			color = Theme.Purple,
+			size = UDim2.new(0, 116, 0, 50),
+			position = UDim2.new(1, -10, 0.5, 0),
+			anchor = Vector2.new(1, 0.5),
+			z = 14,
+			onClick = function(b)
+				if b.Active then
+					Remotes.get("RequestTravel"):FireServer("Zone", i)
+					Panels.close()
+				end
+			end,
+		})
+		rows[i] = { row = row, name = name, info = info, status = status, travel = travel, swatch = swatch }
+	end
+	local function refresh(snap)
+		local speed = snap and snap.speed or 0
+		local highest = SpeedLogic.highestUnlockedZone(speed)
+		local carrying = snap and snap.carried and #snap.carried > 0
+		for i, r in ipairs(rows) do
+			local zone = Config.Zones[i]
+			local unlocked = speed >= zone.speedReq
+			r.row.BackgroundColor3 = unlocked and Theme.White or Color3.fromRGB(225, 222, 230)
+			r.swatch.BackgroundTransparency = unlocked and 0 or 0.55
+			if i == highest then
+				r.status.Text = "★ YOUR BEST ZONE"
+				r.status.TextColor3 = Theme.Orange
+			elseif unlocked then
+				r.status.Text = "✓ Unlocked"
+				r.status.TextColor3 = Theme.Green
+			else
+				r.status.Text = "🔒 Need " .. Util.formatNumber(zone.speedReq - speed) .. " more Speed — train!"
+				r.status.TextColor3 = Theme.Danger
+			end
+			local canGo = unlocked and not carrying
+			r.travel.Active = canGo
+			r.travel.AutoButtonColor = false
+			r.travel.BackgroundColor3 = canGo and Theme.Purple or Theme.Gray
+			Theme.setButtonText(r.travel, unlocked and (carrying and "CARRYING" or "TRAVEL") or "LOCKED")
+		end
+	end
+	State.Changed:Connect(refresh)
+	refresh(State.get())
+	return p
+end
+
 function Panels.toggle(name)
 	if open == name then
 		Panels.close()
@@ -12696,6 +12984,7 @@ end
 function Panels.mount(screen)
 	panels.Shop = buildShop(screen)
 	panels.Index = buildIndex(screen)
+	panels.Zones = buildZones(screen)
 
 	-- compact left nav
 	local nav = Instance.new("Frame")
@@ -12749,7 +13038,148 @@ function Panels.mount(screen)
 end
 
 return Panels
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000041"><Properties><string name="Name">Theme</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000043"><Properties><string name="Name">QuickTravel</string><ProtectedString name="Source"><![CDATA[--[[
+	QuickTravel — the right-hand shortcut column: HOME, STEAL, SHOP, TRAIN, ZONES.
+
+	HOME / STEAL / TRAIN send a RequestTravel intent; the server validates the
+	destination, cooldown and carrying state (see TravelService). SHOP and ZONES
+	open panels. Travel buttons grey out while you carry a core and count down
+	during the cooldown. On small touch screens the column starts collapsed behind
+	a TRAVEL toggle so it never covers the jump button.
+]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config.GameConfig)
+local SpeedLogic = require(Shared.Logic.SpeedLogic)
+local Remotes = require(Shared.Remotes)
+
+local Theme = require(script.Parent.Theme)
+local State = require(script.Parent.Parent.State)
+
+local QuickTravel = {}
+
+local BUTTONS = {
+	{ key = "Home", icon = "🏠", text = "HOME", color = Theme.Blue, travel = true },
+	{ key = "Steal", icon = "🎯", text = "STEAL", color = Theme.Danger, travel = true },
+	{ key = "Shop", icon = "🛒", text = "SHOP", color = Theme.Green },
+	{ key = "Train", icon = "🏃", text = "TRAIN", color = Theme.Orange, travel = true },
+	{ key = "Zones", icon = "🗺", text = "ZONES", color = Theme.Purple },
+}
+local SIZE = 66
+local GAP = 8
+
+function QuickTravel.mount(screen, Panels)
+	local player = Players.LocalPlayer
+	local col = Instance.new("Frame")
+	col.Name = "QuickTravel"
+	col.BackgroundTransparency = 1
+	col.Size = UDim2.new(0, SIZE + 6, 0, 30 + GAP + #BUTTONS * (SIZE + GAP))
+	col.Position = UDim2.new(1, -10, 0.5, 0)
+	col.AnchorPoint = Vector2.new(1, 0.5)
+	col.Parent = screen
+	local list = Instance.new("UIListLayout")
+	list.Padding = UDim.new(0, GAP)
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	list.Parent = col
+
+	local buttons = {}
+	local expanded = true
+	local function setExpanded(on)
+		expanded = on
+		for _, b in pairs(buttons) do
+			b.Visible = on
+		end
+	end
+	local toggle = Theme.button(col, {
+		name = "Toggle",
+		text = "✈ TRAVEL",
+		color = Theme.Ink,
+		size = UDim2.new(0, SIZE + 6, 0, 30),
+		order = 0,
+		onClick = function()
+			setExpanded(not expanded)
+		end,
+	})
+
+	for i, def in ipairs(BUTTONS) do
+		buttons[def.key] = Theme.button(col, {
+			name = def.key .. "Button",
+			icon = def.icon,
+			text = def.text,
+			color = def.color,
+			size = UDim2.new(0, SIZE, 0, SIZE),
+			order = i,
+			onClick = function(b)
+				if def.travel then
+					if b.Active then
+						Remotes.get("RequestTravel"):FireServer(def.key)
+					end
+				else
+					Panels.toggle(def.key)
+				end
+			end,
+		})
+	end
+
+	-- start collapsed on small touch screens (phones)
+	local cam = workspace.CurrentCamera
+	if UserInputService.TouchEnabled and cam and cam.ViewportSize.Y < 500 then
+		setExpanded(false)
+	end
+
+	-- after a trip, put the camera behind the character so you arrive facing forward
+	player:GetAttributeChangedSignal("TravelReadyAt"):Connect(function()
+		task.wait()
+		local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local camera = workspace.CurrentCamera
+		if hrp and camera then
+			local eye = (hrp.CFrame * CFrame.new(0, 6, 14)).Position
+			camera.CFrame = CFrame.lookAt(eye, hrp.Position + Vector3.new(0, 2, 0))
+		end
+	end)
+
+	-- live state: carrying, cooldown, steal target
+	local acc = 0
+	RunService.RenderStepped:Connect(function(dt)
+		acc = acc + dt
+		if acc < 0.2 then
+			return
+		end
+		acc = 0
+		local carrying = (player:GetAttribute("Carrying") or 0) > 0
+		local left = (player:GetAttribute("TravelReadyAt") or 0) - workspace:GetServerTimeNow()
+		local snap = State.get()
+		for _, def in ipairs(BUTTONS) do
+			if def.travel then
+				local b = buttons[def.key]
+				local ok = not carrying and left <= 0
+				b.Active = ok
+				b.BackgroundColor3 = ok and def.color or Theme.Gray
+				if carrying then
+					Theme.setButtonText(b, "CARRY")
+				elseif left > 0 then
+					Theme.setButtonText(b, math.ceil(left) .. "s")
+				elseif def.key == "Steal" and snap then
+					-- show which zone STEAL goes to, e.g. "Z3"
+					Theme.setButtonText(b, "STEAL " .. SpeedLogic.highestUnlockedZone(snap.speed or 0))
+				else
+					Theme.setButtonText(b, def.text)
+				end
+			end
+		end
+	end)
+
+	return { frame = col, buttons = buttons, toggle = toggle, setExpanded = setExpanded, zones = #Config.Zones }
+end
+
+return QuickTravel
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000044"><Properties><string name="Name">Theme</string><ProtectedString name="Source"><![CDATA[--[[
 	Theme — the visual language of the HUD.
 
 	Bold cartoon typography with thick ink outlines, solid saturated fills,
@@ -12940,7 +13370,7 @@ function Theme.pop(guiObject, from)
 end
 
 return Theme
-]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX00000044"><Properties><string name="Name">World</string></Properties><Item class="ModuleScript" referent="RBX00000043"><Properties><string name="Name">WorldFx</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX00000047"><Properties><string name="Name">World</string></Properties><Item class="ModuleScript" referent="RBX00000046"><Properties><string name="Name">WorldFx</string><ProtectedString name="Source"><![CDATA[--[[
 	WorldFx — client-only world presentation:
 	  * Animator: bob/spin/orbit for models tagged "Animated" (cores, disasters,
 	    the storm tower anemometer). Only animates what's near the camera.
@@ -13303,6 +13733,6 @@ end
 
 return WorldFx
 ]]></ProtectedString></Properties></Item></Item></Item></Item></Item>
-<Item class="Players" referent="RBX00000048"><Properties><string name="Name">Players</string><int name="MaxPlayers">8</int></Properties></Item>
-<Item class="TextChatService" referent="RBX00000049"><Properties><string name="Name">TextChatService</string><token name="ChatVersion">1</token></Properties></Item>
+<Item class="Players" referent="RBX0000004B"><Properties><string name="Name">Players</string><int name="MaxPlayers">8</int></Properties></Item>
+<Item class="TextChatService" referent="RBX0000004C"><Properties><string name="Name">TextChatService</string><token name="ChatVersion">1</token></Properties></Item>
 </roblox>

@@ -365,6 +365,88 @@ local function buildIndex(screen)
 	return p
 end
 
+-- Zones --------------------------------------------------------------------------
+-- One row per zone, built from GameConfig. Travel buttons only ask the server;
+-- TravelService re-checks the Speed requirement.
+local RARITY_SHORT = { Common = "C", Uncommon = "U", Rare = "R", Epic = "E", Legendary = "L", Mythic = "M" }
+
+local function rarityText(zone)
+	local parts = {}
+	for _, r in ipairs(Config.RarityOrder) do
+		if zone.rarityWeights[r] and zone.rarityWeights[r] > 0 then
+			table.insert(parts, r)
+		end
+	end
+	-- e.g. "Common → Epic" keeps the row short
+	if #parts > 2 then
+		return parts[1] .. " → " .. parts[#parts] .. " cores"
+	end
+	return table.concat(parts, ", ") .. " cores"
+end
+
+local function buildZones(screen)
+	local p, body = makePanel(screen, "ZonesPanel", "🗺 ZONES", Theme.Purple)
+	local list = Instance.new("UIListLayout")
+	list.Padding = UDim.new(0, 8)
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.Parent = body
+	local rows = {}
+	for i, zone in ipairs(Config.Zones) do
+		local row = Theme.frame(body, { name = "Zone" .. i, size = UDim2.new(1, -12, 0, 78), color = Theme.White, corner = 10, order = i, z = 12 })
+		local swatch = Theme.frame(row, { name = "Swatch", size = UDim2.new(0, 58, 0, 58), position = UDim2.new(0, 10, 0.5, 0), anchor = Vector2.new(0, 0.5), color = Theme.rgb(zone.sky.fog), corner = 10, z = 13 })
+		Theme.label(swatch, { name = "Num", text = tostring(i), size = UDim2.new(1, 0, 1, 0), font = Theme.FontDisplay, z = 14, strokeThickness = 2.5 })
+		local name = Theme.label(row, { name = "ZoneName", text = zone.name, size = UDim2.new(0.42, 0, 0.4, 0), position = UDim2.new(0, 78, 0.06, 0), xAlign = Enum.TextXAlignment.Left, color = Theme.Ink, stroke = false, font = Theme.FontDisplay, z = 13 })
+		local req = zone.speedReq > 0 and ("⚡ " .. Util.formatNumber(zone.speedReq) .. " Speed") or "⚡ No Speed needed"
+		local info = Theme.label(row, { name = "Info", text = req .. "  •  " .. rarityText(zone), size = UDim2.new(0.5, 0, 0.26, 0), position = UDim2.new(0, 78, 0.46, 0), xAlign = Enum.TextXAlignment.Left, color = Color3.fromRGB(90, 90, 110), stroke = false, z = 13 })
+		local status = Theme.label(row, { name = "Status", text = "", size = UDim2.new(0.5, 0, 0.22, 0), position = UDim2.new(0, 78, 0.73, 0), xAlign = Enum.TextXAlignment.Left, color = Theme.Green, stroke = false, z = 13 })
+		local travel = Theme.button(row, {
+			name = "Travel",
+			text = "TRAVEL",
+			color = Theme.Purple,
+			size = UDim2.new(0, 116, 0, 50),
+			position = UDim2.new(1, -10, 0.5, 0),
+			anchor = Vector2.new(1, 0.5),
+			z = 14,
+			onClick = function(b)
+				if b.Active then
+					Remotes.get("RequestTravel"):FireServer("Zone", i)
+					Panels.close()
+				end
+			end,
+		})
+		rows[i] = { row = row, name = name, info = info, status = status, travel = travel, swatch = swatch }
+	end
+	local function refresh(snap)
+		local speed = snap and snap.speed or 0
+		local highest = SpeedLogic.highestUnlockedZone(speed)
+		local carrying = snap and snap.carried and #snap.carried > 0
+		for i, r in ipairs(rows) do
+			local zone = Config.Zones[i]
+			local unlocked = speed >= zone.speedReq
+			r.row.BackgroundColor3 = unlocked and Theme.White or Color3.fromRGB(225, 222, 230)
+			r.swatch.BackgroundTransparency = unlocked and 0 or 0.55
+			if i == highest then
+				r.status.Text = "★ YOUR BEST ZONE"
+				r.status.TextColor3 = Theme.Orange
+			elseif unlocked then
+				r.status.Text = "✓ Unlocked"
+				r.status.TextColor3 = Theme.Green
+			else
+				r.status.Text = "🔒 Need " .. Util.formatNumber(zone.speedReq - speed) .. " more Speed — train!"
+				r.status.TextColor3 = Theme.Danger
+			end
+			local canGo = unlocked and not carrying
+			r.travel.Active = canGo
+			r.travel.AutoButtonColor = false
+			r.travel.BackgroundColor3 = canGo and Theme.Purple or Theme.Gray
+			Theme.setButtonText(r.travel, unlocked and (carrying and "CARRYING" or "TRAVEL") or "LOCKED")
+		end
+	end
+	State.Changed:Connect(refresh)
+	refresh(State.get())
+	return p
+end
+
 function Panels.toggle(name)
 	if open == name then
 		Panels.close()
@@ -399,6 +481,7 @@ end
 function Panels.mount(screen)
 	panels.Shop = buildShop(screen)
 	panels.Index = buildIndex(screen)
+	panels.Zones = buildZones(screen)
 
 	-- compact left nav
 	local nav = Instance.new("Frame")

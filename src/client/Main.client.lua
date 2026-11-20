@@ -16,6 +16,7 @@ local State = require(Client:WaitForChild("State"))
 local Hud = require(Client:WaitForChild("UI"):WaitForChild("Hud"))
 local Panels = require(Client.UI:WaitForChild("Panels"))
 local Announcer = require(Client.UI:WaitForChild("Announcer"))
+local QuickTravel = require(Client.UI:WaitForChild("QuickTravel"))
 local WorldFx = require(Client:WaitForChild("World"):WaitForChild("WorldFx"))
 
 local player = Players.LocalPlayer
@@ -55,6 +56,7 @@ end)
 
 Hud.mount(screen)
 Panels.mount(screen)
+QuickTravel.mount(screen, Panels)
 Announcer.mount(screen)
 WorldFx.mount()
 
@@ -103,6 +105,8 @@ UserInputService.InputBegan:Connect(function(input, processed)
 		Panels.toggle("Shop")
 	elseif input.KeyCode == Enum.KeyCode.B then
 		Panels.toggle("Index")
+	elseif input.KeyCode == Enum.KeyCode.M then
+		Panels.toggle("Zones")
 	end
 end)
 
