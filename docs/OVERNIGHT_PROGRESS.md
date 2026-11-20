@@ -1,13 +1,13 @@
 # Overnight progress (session handoff)
 
-_Last updated: after the "rare core alerts" batch._
+_Last updated: end of overnight session 1 (all work committed and pushed)._
 
 ## 1. Status
 - Branch: `claude/adoring-albattani-tv15ea` (pushed to origin after each batch; never force-pushed).
 - Latest commit: see `git log -1` (this file is committed with each batch).
 - Roblox: **published** by the user. Universe `10778014315`, root place `71402086993128`, visibility **PRIVATE**.
   Studio opens it from Roblox (Team Create). Studio id changes per session: use `list_roblox_studios`.
-  `save_place` = new place version (NOT a publish). Last saved version: 11+.
+  `save_place` = new place version (NOT a publish). Last saved version: 13.
 - Monetization: code complete (ec9125e). **Products NOT created yet** (all ids are still 0 in
   `src/shared/Config/MonetizationConfig.lua`). Blocker below.
 
@@ -41,7 +41,8 @@ _Last updated: after the "rare core alerts" batch._
   Now Toasts 40, Banner 35 (`Announcer.lua`).
 
 ## 3. In progress
-- Nothing half-done. Next task = see priorities.
+- Nothing half-done; working tree clean. Exact next action: check the upload-folder approval (CONTINUE_WORK step 3),
+  else start priority 2 (guardian/core label overlap at nests).
 
 ## 4. Remaining priorities (ranked)
 1. **Monetization products** — blocked on user (see 6). When unblocked: create 2 passes + 3 products
