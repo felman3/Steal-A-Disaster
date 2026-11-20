@@ -94,9 +94,16 @@ Level cost = `40 · 2.15^(level-1)`.
 Rarity multipliers: Common 1, Uncommon 1.6, Rare 2.6, Epic 4.5, Legendary 8,
 Mythic 15, Chaos 30. Mutation multipliers ×1.5 – ×5.
 
-Target pacing (checked by `tests/specs/balance.spec.lua`, which simulates a player):
-each new zone should unlock 2–15 minutes after the previous one, about 1 hour total to
-reach the Void Realm, so there's a reachable milestone every few minutes.
+Target pacing (checked by `tests/specs/balance.spec.lua`, which simulates an efficient
+player who alternates 30 s of training with runs): every zone unlocks 1–20 min after the
+previous one, and the whole route takes 35–110 min. Current result (5 seeds):
+
+| Zone | Overgrowth | Drought | Frostfall | Magma | Abyss | Prehistoric | Skylands | Void |
+|---|---|---|---|---|---|---|---|---|
+| avg unlock (min) | 2.1 | 5.6 | 9.3 | 13.4 | 18.4 | 25.5 | 30.3 | 37.9 |
+
+Real players (dodging guardians, getting robbed, exploring) take roughly 1.5–2× longer,
+which works out to a new milestone every 5–15 minutes.
 
 **Carrying:** capacity 1 → 4 via upgrades. Walk multiplier
 `max(0.45, 1 - 0.12 · Σweight)`; weight by rarity 1 / 1.2 / 1.5 / 2 / 2.5 / 3 / 3.5.

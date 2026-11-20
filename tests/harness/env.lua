@@ -160,7 +160,7 @@ function Env.new(opts)
 		if heartbeat then
 			heartbeat:Fire(dt)
 		end
-		if renderStepped and opts.mode == "client" then
+		if renderStepped and (opts.mode == "client" or opts.mode == "both") then
 			renderStepped:Fire(dt)
 		end
 		local due = {}
@@ -422,6 +422,15 @@ function Env.new(opts)
 		GetServerTimeNow = function()
 			return 1700000000 + now
 		end,
+		BulkMoveTo = function(self, parts, cframes, mode)
+			if #parts ~= #cframes then
+				error("BulkMoveTo: parts/cframes length mismatch", 2)
+			end
+			env.bulkMoves = (env.bulkMoves or 0) + 1
+			for i, p in ipairs(parts) do
+				p.CFrame = cframes[i]
+			end
+		end,
 		FindPartOnRay = function()
 			return nil
 		end,
@@ -540,7 +549,7 @@ function Env.new(opts)
 			return opts.mode ~= "client"
 		end,
 		IsClient = function()
-			return opts.mode == "client"
+			return opts.mode == "client" or opts.mode == "both"
 		end,
 		IsStudio = function()
 			return true
@@ -886,7 +895,7 @@ function Env.new(opts)
 		M.state[p].parent = players
 		table.insert(M.state[players].children, p)
 		table.insert(playerList, p)
-		if opts.mode == "client" and not localPlayer then
+		if (opts.mode == "client" or opts.mode == "both") and not localPlayer then
 			localPlayer = p
 			M.state[players].overrides.LocalPlayer = p
 		end
@@ -1130,6 +1139,23 @@ function Env.new(opts)
 	-- run `fn` inside a scheduler coroutine (so it may yield)
 	function env.run(fn, ...)
 		return S.spawn(fn, ...)
+	end
+
+	if opts.mode == "both" then
+		M.onFireClient = function(remote, player, ...)
+			if player == localPlayer then
+				remote.OnClientEvent:Fire(...)
+			end
+		end
+		M.onFireAllClients = function(remote, ...)
+			remote.OnClientEvent:Fire(...)
+		end
+		M.onFireServer = function(remote, ...)
+			remote.OnServerEvent:Fire(localPlayer, ...)
+		end
+	end
+	function env.localPlayer()
+		return localPlayer
 	end
 
 	function env.close()
