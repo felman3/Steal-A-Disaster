@@ -1,6 +1,6 @@
 # Overnight progress (session handoff)
 
-_Last updated: after the multiplayer regression + resolution sweep._
+_Last updated: after the "rare core alerts" batch._
 
 ## 1. Status
 - Branch: `claude/adoring-albattani-tv15ea` (pushed to origin after each batch; never force-pushed).
@@ -35,6 +35,8 @@ _Last updated: after the multiplayer regression + resolution sweep._
   All from the server snapshot.
 - Pedestal labels show the real income with Double Cash (refreshIncomeLabels on pass grant); sell value unchanged.
   TREADMILL tag raised above the base side wall.
+- **Rare core alerts**: after each 5-min refresh, up to two Legendary/Mythic fresh cores are announced to
+  everyone (CoreSpawnService:_alertRare). Seen in Studio.
 - **Bug fixed**: toasts and announcement banners were drawn behind open panels (ZIndex 1 vs 10).
   Now Toasts 40, Banner 35 (`Announcer.lua`).
 
@@ -81,7 +83,7 @@ _Last updated: after the multiplayer regression + resolution sweep._
 - Optional: Game Settings → Security → Enable Studio Access to API Services (real DataStore in Studio).
 
 ## 7. Testing status
-- Automated: 217 pass; lint ok; build ok.
+- Automated: 218 pass; lint ok; build ok.
 - 2-player Studio regression (StudioTestService): owner travels away with STEAL, thief steals, thief HOME refused
   while carrying (click + forced remote), owner gets BASE BREACH, HOME back, tags thief, core returns, no dupes.
 - Studio (published place): all 5 Quick Travel buttons, locked-zone refusal (click + forced remote),

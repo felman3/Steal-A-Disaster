@@ -5059,6 +5059,7 @@ function CoreSpawnService:consume(entity)
 end
 
 function CoreSpawnService:refreshAll(frenzy)
+	local created = {}
 	for zi, list in ipairs(points) do
 		for pi, p in ipairs(list) do
 			local e = p.entity
@@ -5067,10 +5068,37 @@ function CoreSpawnService:refreshAll(frenzy)
 				p.entity = nil
 			end
 			if not p.entity then
-				self:_create(zi, pi, p.pos, { frenzy = frenzy })
+				table.insert(created, self:_create(zi, pi, p.pos, { frenzy = frenzy }))
 			end
 		end
 	end
+	return created
+end
+
+-- Tell everyone about the rarest fresh cores (Legendary+), at most two per refresh,
+-- so there is a reason to travel and race for them.
+CoreSpawnService.ALERT_MIN_RANK = 5
+function CoreSpawnService:_alertRare(entities)
+	local rare = {}
+	for _, e in ipairs(entities or {}) do
+		local core = Config.Cores[e.coreId]
+		local rank = core and Config.Rarities[core.rarity].rank or 0
+		if rank >= self.ALERT_MIN_RANK then
+			table.insert(rare, { e = e, rank = rank })
+		end
+	end
+	table.sort(rare, function(a, b)
+		return a.rank > b.rank
+	end)
+	for i = 1, math.min(2, #rare) do
+		local e = rare[i].e
+		local core = Config.Cores[e.coreId]
+		local text = "🌟 A " .. string.upper(core.rarity) .. " " .. core.name .. " appeared in " .. Config.Zones[e.zoneIndex].name .. "!"
+		for _, pl in ipairs(Players:GetPlayers()) do
+			S.PlayerDataService:notify(pl, text, "info")
+		end
+	end
+	return math.min(2, #rare)
 end
 
 function CoreSpawnService:spawnChaosCores(count)
@@ -5115,8 +5143,9 @@ end
 function CoreSpawnService:Start()
 	self:refreshAll(false)
 	S.EventService.Refreshed:Connect(function()
-		self:refreshAll(true)
+		local fresh = self:refreshAll(true)
 		self:spawnChaosCores(Config.Events.ChaosCoresPerFrenzy)
+		self:_alertRare(fresh)
 	end)
 	S.EventService.PhaseChanged:Connect(function(new, old)
 		if old == "Frenzy" then

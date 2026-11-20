@@ -256,6 +256,28 @@ describe("stealing rules & exploits", function()
 		noErrors(env)
 	end)
 
+	it("rare fresh cores are announced to everyone (Legendary and up, max two)", function()
+		local env, S = boot()
+		local p = env.addPlayer("Watcher")
+		env.advance(1)
+		local Config = env.require("ReplicatedStorage.Shared.Config.GameConfig")
+		local mythic, common
+		for id, c in pairs(Config.Cores) do
+			if c.rarity == "Mythic" and Config.ZoneById[c.zone] then
+				mythic = { coreId = id, zoneIndex = Config.ZoneIndex[c.zone] }
+			elseif c.rarity == "Common" then
+				common = { coreId = id, zoneIndex = 1 }
+			end
+		end
+		local before = #remoteCalls(env, "Notify", p)
+		expect(S.CoreSpawnService:_alertRare({ common, mythic, mythic, mythic })).toBe(2)
+		local calls = remoteCalls(env, "Notify", p)
+		expect(#calls - before).toBe(2)
+		expect(calls[#calls].args[1]).toContain("MYTHIC")
+		expect(S.CoreSpawnService:_alertRare({ common })).toBe(0)
+		noErrors(env)
+	end)
+
 	it("spawns every base's players facing the central avenue", function()
 		local env, S = boot()
 		for slot = 1, 8 do
