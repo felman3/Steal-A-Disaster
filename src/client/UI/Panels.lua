@@ -180,7 +180,83 @@ local function buildShop(screen)
 	if State.get() then
 		refresh(State.get())
 	end
+	Panels._buildBoosts(body)
 	return p
+end
+
+-- Boosts (Robux) ------------------------------------------------------------------
+-- Rows below the upgrades. Prices come from Roblox (GetProductInfo); the configured
+-- intendedPrice is shown only for Studio mock items. Buttons only ask the server to
+-- open Roblox's purchase prompt.
+function Panels._buildBoosts(body)
+	local MConfig = require(Shared.Config.MonetizationConfig)
+	local MarketplaceService = game:GetService("MarketplaceService")
+	local RunService = game:GetService("RunService")
+	Theme.label(body, { name = "BoostsHeader", text = "⭐ BOOSTS", size = UDim2.new(1, -12, 0, 34), font = Theme.FontDisplay, color = Theme.Orange, order = 100, z = 12, strokeThickness = 2 })
+	local rows = {}
+	for j, key in ipairs(MConfig.BoostsOrder) do
+		local item = MConfig.Items[key]
+		local row = Theme.frame(body, { name = "Boost_" .. key, size = UDim2.new(1, -12, 0, 76), color = Theme.White, corner = 10, order = 100 + j, z = 12 })
+		Theme.label(row, { name = "Icon", text = item.icon, size = UDim2.new(0, 56, 0, 56), position = UDim2.new(0, 10, 0.5, 0), anchor = Vector2.new(0, 0.5), stroke = false, z = 13 })
+		Theme.label(row, { name = "BoostName", text = item.name, size = UDim2.new(0.5, 0, 0.44, 0), position = UDim2.new(0, 76, 0.08, 0), xAlign = Enum.TextXAlignment.Left, color = Theme.Ink, stroke = false, z = 13 })
+		local effect = Theme.label(row, { name = "Effect", text = item.benefit, size = UDim2.new(0.55, 0, 0.34, 0), position = UDim2.new(0, 76, 0.56, 0), xAlign = Enum.TextXAlignment.Left, color = Color3.fromRGB(90, 90, 110), stroke = false, z = 13 })
+		local buy = Theme.button(row, {
+			name = "Buy",
+			text = "…",
+			color = Theme.Orange,
+			size = UDim2.new(0, 130, 0, 52),
+			position = UDim2.new(1, -10, 0.5, 0),
+			anchor = Vector2.new(1, 0.5),
+			z = 14,
+			onClick = function()
+				Remotes.get("RequestPurchase"):FireServer(key)
+			end,
+		})
+		rows[key] = { row = row, buy = buy, effect = effect, price = "…" }
+	end
+	local function refresh(snap)
+		for key, r in pairs(rows) do
+			local item = MConfig.Items[key]
+			local owned = snap and snap.passes and snap.passes[key]
+			if owned then
+				Theme.setButtonText(r.buy, "OWNED ✓")
+				r.buy.BackgroundColor3 = Theme.Gray
+				r.buy.Active = false
+			else
+				Theme.setButtonText(r.buy, r.price)
+				r.buy.BackgroundColor3 = Theme.Orange
+				r.buy.Active = true
+			end
+			if key == "CashPack" and snap and snap.cashPack then
+				r.effect.Text = "+" .. Util.formatMoney(snap.cashPack) .. " now (≈10 min of income)"
+			elseif item.type == "GamePass" and snap and owned then
+				r.effect.Text = item.benefit .. " — active"
+			end
+		end
+	end
+	State.Changed:Connect(refresh)
+	task.spawn(function()
+		for key, r in pairs(rows) do
+			local item = MConfig.Items[key]
+			if item.id > 0 then
+				local ok, info = pcall(function()
+					local infoType = (item.type == "GamePass") and Enum.InfoType.GamePass or Enum.InfoType.Product
+					return MarketplaceService:GetProductInfo(item.id, infoType)
+				end)
+				if ok and type(info) == "table" and info.PriceInRobux then
+					r.price = "R$ " .. tostring(info.PriceInRobux)
+				else
+					r.price = "BUY" -- Roblox's own dialog shows the real price
+				end
+			elseif MConfig.MockInStudio and RunService:IsStudio() then
+				r.price = "R$ " .. item.intendedPrice .. " (test)"
+			else
+				r.row.Visible = false -- not created on Roblox yet: never sell it
+			end
+		end
+		refresh(State.get())
+	end)
+	refresh(State.get())
 end
 
 -- Index ----------------------------------------------------------------------------

@@ -17,11 +17,16 @@
 		index = { [disasterId] = true },
 		stats = { stolen = n, hatched = n, robbed = n },
 		lastSeen = unixTime,
+		passes = { [passKey] = true },   -- Game Pass entitlements (re-verified on join)
+		boostSpeed = seconds,             -- Speed Boost play-time left
+		hatchCredits = n,                 -- paid Instant Hatches waiting to be used
+		receipts = { purchaseId, ... },   -- processed Developer Product receipts
 	}
 ]]
 
 local Config = require(script.Parent.Parent.Config.GameConfig)
 local Util = require(script.Parent.Parent.Util)
+local MConfig = require(script.Parent.Parent.Config.MonetizationConfig)
 
 local DataSchema = {}
 
@@ -42,6 +47,10 @@ function DataSchema.default()
 		index = {},
 		stats = { stolen = 0, hatched = 0, robbed = 0 },
 		lastSeen = 0,
+		passes = {},
+		boostSpeed = 0,
+		hatchCredits = 0,
+		receipts = {},
 	}
 end
 
@@ -152,6 +161,27 @@ function DataSchema.sanitize(raw)
 		data.stats.stolen = math.floor(num(raw.stats.stolen, 0, 0))
 		data.stats.hatched = math.floor(num(raw.stats.hatched, 0, 0))
 		data.stats.robbed = math.floor(num(raw.stats.robbed, 0, 0))
+	end
+
+	-- monetization: only known passes, bounded numbers, string receipt ids
+	if type(raw.passes) == "table" then
+		for key, item in pairs(MConfig.Items) do
+			if item.type == "GamePass" and raw.passes[key] == true then
+				data.passes[key] = true
+			end
+		end
+	end
+	data.boostSpeed = num(raw.boostSpeed, 0, 0, 1e7)
+	data.hatchCredits = math.floor(num(raw.hatchCredits, 0, 0, 1000))
+	if type(raw.receipts) == "table" then
+		for _, id in ipairs(raw.receipts) do
+			if type(id) == "string" and #id > 0 and #id <= 100 then
+				table.insert(data.receipts, id)
+			end
+		end
+		while #data.receipts > MConfig.ReceiptHistorySize do
+			table.remove(data.receipts, 1)
+		end
 	end
 
 	return data

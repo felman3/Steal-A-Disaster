@@ -21,9 +21,11 @@ local Config = require(Shared.Config.GameConfig)
 local DataSchema = require(Shared.Logic.DataSchema)
 local UpgradeLogic = require(Shared.Logic.UpgradeLogic)
 local SpeedLogic = require(Shared.Logic.SpeedLogic)
+local EconomyLogic = require(Shared.Logic.EconomyLogic)
 local Util = require(Shared.Util)
 local Signal = require(Shared.Signal)
 local Remotes = require(Shared.Remotes)
+local MonetizationLogic = require(Shared.Logic.MonetizationLogic)
 
 local PlayerDataService = { Name = "PlayerDataService" }
 PlayerDataService.Loaded = Signal.new() -- (player, data, offlineSeconds)
@@ -124,6 +126,7 @@ function PlayerDataService:_onPlayerAdded(player)
 	if status == "memory" or status == "failed" then
 		session.noSave = true
 	end
+	session.memoryOnly = status == "memory"
 	local data = DataSchema.sanitize(raw)
 	local offline = 0
 	if data.lastSeen > 0 then
@@ -173,6 +176,31 @@ function PlayerDataService:markDirty(player)
 	s.dirty = true
 	s.syncPending = true
 	self.Changed:Fire(player)
+end
+
+-- Purchases may only be granted into a session that will be saved (or a Studio
+-- memory session). A live session whose load FAILED runs on defaults; granting
+-- there would lose the purchase, so ProcessReceipt must retry later instead.
+function PlayerDataService:canGrantPurchases(player)
+	local s = sessions[player]
+	return s ~= nil and s.loaded and (not s.noSave or s.memoryOnly == true)
+end
+
+-- Save now and report whether it reached the DataStore. Waits for an in-flight
+-- save so the snapshot written includes the latest changes (receipt records).
+function PlayerDataService:saveForReceipt(player)
+	local s = sessions[player]
+	if not s or not s.loaded then
+		return false
+	end
+	local deadline = os.clock() + 15
+	while s.saving and os.clock() < deadline do
+		task.wait(0.1)
+	end
+	if s.saving then
+		return false
+	end
+	return self:save(player, false)
 end
 
 function PlayerDataService:loadedPlayers()
@@ -280,6 +308,12 @@ function PlayerDataService:snapshot(player)
 		nextZoneReq = nextZone and nextZone.speedReq or 0,
 		stats = Util.deepCopy(data.stats),
 		shieldUntil = player:GetAttribute("ShieldUntil") or 0,
+		passes = Util.deepCopy(data.passes),
+		boostSpeed = data.boostSpeed,
+		hatchCredits = data.hatchCredits,
+		speedMult = MonetizationLogic.speedMultiplier(data),
+		incomeMult = MonetizationLogic.incomeMultiplier(data),
+		cashPack = MonetizationLogic.cashPackAmount(EconomyLogic.totalIncome(data.disasters), data.speed),
 	}
 end
 

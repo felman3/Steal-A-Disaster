@@ -148,6 +148,11 @@ local function filterPrompt(prompt, player)
 			if prompt:GetAttribute("BaseSlot") == mySlot and prompt.Enabled then
 				prompt.Enabled = false
 			end
+		elseif prompt:GetAttribute("OwnerOnly") == true then
+			-- purchase prompts (Speed Boost, Instant Hatch) appear only on your own base;
+			-- range (not Enabled, which the server drives) hides them elsewhere
+			local mine = mySlot ~= nil and prompt:GetAttribute("BaseSlot") == mySlot
+			prompt.MaxActivationDistance = mine and (prompt:GetAttribute("Range") or 8) or 0
 		elseif prompt.Name == "SellPrompt" then
 			if prompt:GetAttribute("OwnerOnly") ~= player.UserId and prompt.Enabled then
 				prompt.Enabled = false

@@ -71,6 +71,15 @@ local function unitFor(player, slot)
 	return base and base.pods[slot] or nil
 end
 
+-- Instant Hatch prompt: only while the pod is incubating and not being stolen
+-- (the client shows it only on its own base).
+local function setHatchPrompt(unit, on)
+	local prompt = unit and unit.root:FindFirstChild("HatchPrompt")
+	if prompt and prompt.Enabled ~= on then
+		prompt.Enabled = on
+	end
+end
+
 function IncubatorService:_clearVisual(player, slot)
 	local v = visuals[player] and visuals[player][slot]
 	if v then
@@ -90,6 +99,7 @@ function IncubatorService:_clearVisual(player, slot)
 		if prompt then
 			prompt.Enabled = false
 		end
+		setHatchPrompt(unit, false)
 	end
 end
 
@@ -147,6 +157,7 @@ function IncubatorService:_updateVisual(player, pod)
 	unit.fill.Size = Vector3.new(h, unit.fill.Size.Y, unit.fill.Size.Z)
 	unit.fill.CFrame = CFrame.new(unit.basePos + Vector3.new(0, 1.45 + h / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2)
 	v.bar.Size = UDim2.new(frac, 0, 1, 0)
+	setHatchPrompt(unit, frac < 1 and not self:isInTransit(player, pod.s))
 	if self:isInTransit(player, pod.s) then
 		v.timer.Text = "STOLEN! CHASE THEM!"
 		v.timer.TextColor3 = Color3.fromRGB(255, 80, 80)
@@ -272,6 +283,20 @@ function IncubatorService:tryHatchAll(player)
 	end
 end
 
+-- Instant Hatch: complete one pod exactly as if its timer ran out. The normal
+-- hatch path then rolls mutation and places the disaster, so rarity, mutation
+-- chance and value are unchanged.
+function IncubatorService:finishPod(player, pod)
+	if not pod or self:isInTransit(player, pod.s) then
+		return false
+	end
+	pod.p = IncubatorLogic.incubationTime(pod.c, pod.z)
+	self:_updateVisual(player, pod)
+	S.PlayerDataService:markDirty(player)
+	self:_tryHatch(player, pod)
+	return true
+end
+
 function IncubatorService:onCapacityChanged(player)
 	self:fillFromStorage(player)
 	self:tryHatchAll(player)
@@ -351,6 +376,23 @@ function IncubatorService:_wirePrompts()
 			prompt.Parent = unit.root
 			prompt.Triggered:Connect(function(thief)
 				S.StealService:tryStealFromBase(thief, slot, i)
+			end)
+			local hatch = Instance.new("ProximityPrompt")
+			hatch.Name = "HatchPrompt"
+			hatch.ActionText = "Instant Hatch"
+			hatch.ObjectText = "🥚 Finish this pod now"
+			hatch.HoldDuration = 0
+			hatch.MaxActivationDistance = 8
+			hatch.RequiresLineOfSight = false
+			hatch.Enabled = false
+			hatch:SetAttribute("BaseSlot", slot)
+			hatch:SetAttribute("OwnerOnly", true)
+			hatch:SetAttribute("Range", 8)
+			hatch.Parent = unit.root
+			hatch.Triggered:Connect(function(player)
+				if S.BaseService:slotOf(player) == slot and S.MonetizationService then
+					S.MonetizationService:requestPurchase(player, "InstantHatch", { podSlot = i })
+				end
 			end)
 		end
 	end

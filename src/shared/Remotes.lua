@@ -19,6 +19,7 @@ Remotes.Events = {
 	-- client -> server
 	"RequestUpgrade", -- (upgradeId)
 	"RequestShield", -- ()
+	"RequestPurchase", -- (itemKey, podSlot?) only opens the Roblox purchase prompt; grants happen in ProcessReceipt
 }
 
 local folder

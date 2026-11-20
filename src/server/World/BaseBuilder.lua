@@ -107,7 +107,7 @@ local function buildTreadmill(model, slotIndex, cf)
 	Kit.text(tag, { name = "Text", text = "🏃 TREADMILL", color = TRIM, font = Enum.Font.LuckiestGuy })
 	-- conveyor: the belt pushes toward local -X; running toward the console keeps you in place
 	belt.AssemblyLinearVelocity = rot:VectorToWorldSpace(Vector3.new(-Config.Speed.BeltSpeed, 0, 0))
-	return { model = m, belt = belt, frame = frame, gainLabel = sg:FindFirstChild("Gain") }
+	return { model = m, belt = belt, frame = frame, console = console, gainLabel = sg:FindFirstChild("Gain") }
 end
 
 local function buildTerminal(model, pos, rot, title, color, icon)

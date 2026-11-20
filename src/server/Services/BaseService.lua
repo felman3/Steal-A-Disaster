@@ -220,11 +220,28 @@ function BaseService:refresh(player)
 	b.infoText.Text = Util.formatMoney(income) .. "/s  •  " .. #data.disasters .. "/" .. pedCount .. " disasters  •  Tier " .. tier
 	b.billboardName.Text = player.DisplayName
 	b.billboardInfo.Text = Util.formatMoney(income) .. "/s"
-	local gain = b.treadmill.gainLabel
-	if gain then
-		local SpeedLogic = require(Shared.Logic.SpeedLogic)
-		gain.Text = "+" .. Util.formatNumber(SpeedLogic.gainPerStep(data.upgrades.Treadmill)) .. " SPEED / STEP"
+	self:refreshTreadmillLabel(player)
+end
+
+-- Treadmill screen: Speed per step, the purchase multiplier and Boost time left.
+function BaseService:refreshTreadmillLabel(player)
+	local s = slotOf[player]
+	local data = S.PlayerDataService:get(player)
+	local gain = s and bases[s].treadmill.gainLabel
+	if not gain or not data then
+		return
 	end
+	local SpeedLogic = require(Shared.Logic.SpeedLogic)
+	local MonetizationLogic = require(Shared.Logic.MonetizationLogic)
+	local mult = MonetizationLogic.speedMultiplier(data)
+	local perStep = SpeedLogic.gainPerStep(data.upgrades.Treadmill) * mult
+	local text = "+" .. Util.formatNumber(perStep) .. " SPEED / STEP"
+	if (data.boostSpeed or 0) > 0 then
+		text = text .. "  ⚡x" .. mult .. " " .. Util.formatTime(data.boostSpeed)
+	elseif mult > 1 then
+		text = text .. "  (x" .. mult .. ")"
+	end
+	gain.Text = text
 end
 
 -- Assignment ---------------------------------------------------------------

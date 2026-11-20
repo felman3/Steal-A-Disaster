@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local SpeedLogic = require(Shared.Logic.SpeedLogic)
+local MonetizationLogic = require(Shared.Logic.MonetizationLogic)
 local Util = require(Shared.Util)
 
 local SpeedService = { Name = "SpeedService" }
@@ -68,7 +69,7 @@ function SpeedService:addSteps(player, steps)
 	if not data or steps <= 0 then
 		return 0
 	end
-	local gain = SpeedLogic.gainPerStep(data.upgrades.Treadmill) * steps
+	local gain = SpeedLogic.gainPerStep(data.upgrades.Treadmill) * steps * MonetizationLogic.speedMultiplier(data)
 	data.speed = data.speed + gain
 	data.steps = data.steps + steps
 	return gain

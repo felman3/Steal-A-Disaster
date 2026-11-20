@@ -552,7 +552,7 @@ function Env.new(opts)
 			return opts.mode == "client" or opts.mode == "both"
 		end,
 		IsStudio = function()
-			return true
+			return env.studio ~= false
 		end,
 		IsRunning = function()
 			return true
@@ -777,7 +777,32 @@ function Env.new(opts)
 		UnbindAction = function() end,
 		SetTitle = function() end,
 	})
-	service("MarketplaceService")
+	-- MarketplaceService: ownership table, recorded prompts, settable ProcessReceipt
+	local market = service("MarketplaceService", {}, { "PromptGamePassPurchaseFinished", "PromptProductPurchaseFinished" })
+	env.market = { owned = {}, prompts = {}, prices = {}, ownershipFails = false }
+	svcMethods("MarketplaceService", {
+		ProcessReceipt = false, -- callback slot (writable below)
+		UserOwnsGamePassAsync = function(self, userId, passId)
+			if env.market.ownershipFails then
+				error("HTTP 500 (simulated MarketplaceService outage)")
+			end
+			return env.market.owned[tostring(userId) .. ":" .. tostring(passId)] == true
+		end,
+		PromptProductPurchase = function(self, player, id)
+			table.insert(env.market.prompts, { kind = "product", player = player, id = id })
+		end,
+		PromptGamePassPurchase = function(self, player, id)
+			table.insert(env.market.prompts, { kind = "pass", player = player, id = id })
+		end,
+		GetProductInfo = function(self, id, infoType)
+			local price = env.market.prices[id]
+			if not price then
+				error("Product not found (simulated)")
+			end
+			return { PriceInRobux = price, Name = "Item " .. tostring(id) }
+		end,
+	})
+	M.state[market].writableOverrides = { ProcessReceipt = true }
 	service("TextService")
 	svcMethods("TextService", {
 		GetTextSize = function(self, text, size)

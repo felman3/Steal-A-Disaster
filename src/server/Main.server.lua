@@ -22,6 +22,7 @@ local ORDER = {
 	"DisasterCollectionService",
 	"GuardianService",
 	"UpgradeService",
+	"MonetizationService", -- Game Passes + Developer Products (ProcessReceipt)
 	"DevService", -- Studio-only chat commands
 }
 

@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local EconomyLogic = require(Shared.Logic.EconomyLogic)
+local MonetizationLogic = require(Shared.Logic.MonetizationLogic)
 local Util = require(Shared.Util)
 
 local EconomyService = { Name = "EconomyService" }
@@ -32,7 +33,7 @@ function EconomyService:recompute(player)
 		incomeCache[player] = 0
 		return 0
 	end
-	local inc = EconomyLogic.totalIncome(data.disasters)
+	local inc = EconomyLogic.totalIncome(data.disasters) * MonetizationLogic.incomeMultiplier(data)
 	incomeCache[player] = inc
 	player:SetAttribute("Income", inc)
 	return inc

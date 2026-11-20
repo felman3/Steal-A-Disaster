@@ -2,7 +2,7 @@
 <External>null</External><External>nil</External>
 <Item class="Workspace" referent="RBX00000000"><Properties><string name="Name">Workspace</string><bool name="StreamingEnabled">false</bool><float name="Gravity">196.2</float></Properties></Item>
 <Item class="Lighting" referent="RBX00000001"><Properties><string name="Name">Lighting</string><token name="Technology">4</token><float name="Brightness">2.4</float><float name="ClockTime">14.2</float><bool name="GlobalShadows">true</bool></Properties></Item>
-<Item class="ReplicatedStorage" referent="RBX00000018"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX00000017"><Properties><string name="Name">Shared</string></Properties><Item class="Folder" referent="RBX00000003"><Properties><string name="Name">Config</string></Properties><Item class="ModuleScript" referent="RBX00000002"><Properties><string name="Name">GameConfig</string><ProtectedString name="Source"><![CDATA[--[[
+<Item class="ReplicatedStorage" referent="RBX0000001A"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX00000019"><Properties><string name="Name">Shared</string></Properties><Item class="Folder" referent="RBX00000004"><Properties><string name="Name">Config</string></Properties><Item class="ModuleScript" referent="RBX00000002"><Properties><string name="Name">GameConfig</string><ProtectedString name="Source"><![CDATA[--[[
 	GameConfig — single source of truth for content and balance.
 
 	Pure data (no Roblox types) so it can be loaded by the headless test runner.
@@ -419,7 +419,99 @@ for id, d in pairs(GameConfig.Disasters) do
 end
 
 return GameConfig
-]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX0000000E"><Properties><string name="Name">Logic</string></Properties><Item class="ModuleScript" referent="RBX00000004"><Properties><string name="Name">CarryLogic</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000003"><Properties><string name="Name">MonetizationConfig</string><ProtectedString name="Source"><![CDATA[--[[
+	MonetizationConfig — every Game Pass and Developer Product in one place.
+
+	`id` is the real Roblox asset id. It stays 0 until the item is created in the
+	Creator Dashboard (see docs/MONETIZATION.md). While an id is 0:
+	  * live servers hide the item and never sell it;
+	  * Studio can run a mock purchase (MockInStudio) so the full grant path can be
+	    tested without spending Robux.
+
+	`intendedPrice` is documentation only. The shop shows the price returned by
+	MarketplaceService:GetProductInfo, and Roblox charges whatever the item is set to.
+
+	Fairness rules: nothing here touches PvP (shield, tag range, carry cap, steal
+	protection), and nothing sells cores, disasters, zones or random rewards.
+
+	Pure data (no Roblox types) so the headless tests can load it.
+]]
+
+local MonetizationConfig = {}
+
+-- Studio only: items whose id is still 0 can be bought through a mock flow.
+MonetizationConfig.MockInStudio = true
+
+-- Processed Developer Product PurchaseIds kept per player (idempotency window).
+MonetizationConfig.ReceiptHistorySize = 200
+
+MonetizationConfig.Items = {
+	TurboTreadmill = {
+		type = "GamePass",
+		id = 0,
+		intendedPrice = 149,
+		permanent = true,
+		icon = "🏃",
+		name = "Turbo Treadmill",
+		benefit = "2× Speed from every treadmill step",
+		description = "Permanently doubles the Speed you earn on your treadmill.",
+	},
+	DoubleCash = {
+		type = "GamePass",
+		id = 0,
+		intendedPrice = 149,
+		permanent = true,
+		icon = "💰",
+		name = "Double Cash",
+		benefit = "2× income from your disasters",
+		description = "Permanently doubles the money your displayed disasters earn.",
+	},
+	InstantHatch = {
+		type = "DeveloperProduct",
+		id = 0,
+		intendedPrice = 29,
+		permanent = false,
+		icon = "🥚",
+		name = "Instant Hatch",
+		benefit = "Finishes one incubating pod now",
+		description = "Hatches one pod immediately. Rarity, mutation chance and value are unchanged.",
+	},
+	SpeedBoost = {
+		type = "DeveloperProduct",
+		id = 0,
+		intendedPrice = 49,
+		permanent = false,
+		icon = "⚡",
+		name = "Speed Boost",
+		benefit = "2× treadmill Speed for 15 minutes",
+		description = "Counts down only while you play. Buying again adds time; it never raises the multiplier.",
+		durationSeconds = 900,
+	},
+	CashPack = {
+		type = "DeveloperProduct",
+		id = 0,
+		intendedPrice = 79,
+		permanent = false,
+		icon = "💵",
+		name = "Cash Pack",
+		benefit = "About 10 minutes of your income",
+		description = "Scales with your progress: 10 minutes of your base income, with a minimum set by your highest unlocked zone.",
+		incomeSeconds = 600,
+		-- minimum = highest unlocked zone's common income × incomeSeconds × this
+		minimumZoneIncomes = 2,
+	},
+}
+
+-- Rows in the shop's Boosts section (Speed Boost and Instant Hatch live in the world).
+MonetizationConfig.BoostsOrder = { "TurboTreadmill", "DoubleCash", "CashPack" }
+
+-- Treadmill Speed multiplier is additive: x1 base, x2 with Turbo OR a Boost, x3 with both.
+MonetizationConfig.TurboSpeedBonus = 1
+MonetizationConfig.BoostSpeedBonus = 1
+MonetizationConfig.DoubleCashMult = 2
+
+return MonetizationConfig
+]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX00000010"><Properties><string name="Name">Logic</string></Properties><Item class="ModuleScript" referent="RBX00000005"><Properties><string name="Name">CarryLogic</string><ProtectedString name="Source"><![CDATA[--[[
 	CarryLogic — weight, slowdown, capacity, teleport heuristics.
 ]]
 
@@ -492,7 +584,7 @@ function CarryLogic.spendBudget(budget, dist, dt, maxWalk)
 end
 
 return CarryLogic
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000005"><Properties><string name="Name">DataSchema</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000006"><Properties><string name="Name">DataSchema</string><ProtectedString name="Source"><![CDATA[--[[
 	DataSchema — default player data and a strict sanitizer.
 
 	Everything loaded from the DataStore goes through sanitize(), which drops
@@ -511,11 +603,16 @@ return CarryLogic
 		index = { [disasterId] = true },
 		stats = { stolen = n, hatched = n, robbed = n },
 		lastSeen = unixTime,
+		passes = { [passKey] = true },   -- Game Pass entitlements (re-verified on join)
+		boostSpeed = seconds,             -- Speed Boost play-time left
+		hatchCredits = n,                 -- paid Instant Hatches waiting to be used
+		receipts = { purchaseId, ... },   -- processed Developer Product receipts
 	}
 ]]
 
 local Config = require(script.Parent.Parent.Config.GameConfig)
 local Util = require(script.Parent.Parent.Util)
+local MConfig = require(script.Parent.Parent.Config.MonetizationConfig)
 
 local DataSchema = {}
 
@@ -536,6 +633,10 @@ function DataSchema.default()
 		index = {},
 		stats = { stolen = 0, hatched = 0, robbed = 0 },
 		lastSeen = 0,
+		passes = {},
+		boostSpeed = 0,
+		hatchCredits = 0,
+		receipts = {},
 	}
 end
 
@@ -648,6 +749,27 @@ function DataSchema.sanitize(raw)
 		data.stats.robbed = math.floor(num(raw.stats.robbed, 0, 0))
 	end
 
+	-- monetization: only known passes, bounded numbers, string receipt ids
+	if type(raw.passes) == "table" then
+		for key, item in pairs(MConfig.Items) do
+			if item.type == "GamePass" and raw.passes[key] == true then
+				data.passes[key] = true
+			end
+		end
+	end
+	data.boostSpeed = num(raw.boostSpeed, 0, 0, 1e7)
+	data.hatchCredits = math.floor(num(raw.hatchCredits, 0, 0, 1000))
+	if type(raw.receipts) == "table" then
+		for _, id in ipairs(raw.receipts) do
+			if type(id) == "string" and #id > 0 and #id <= 100 then
+				table.insert(data.receipts, id)
+			end
+		end
+		while #data.receipts > MConfig.ReceiptHistorySize do
+			table.remove(data.receipts, 1)
+		end
+	end
+
 	return data
 end
 
@@ -676,7 +798,7 @@ function DataSchema.findBySlot(list, slot)
 end
 
 return DataSchema
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000006"><Properties><string name="Name">EconomyLogic</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000007"><Properties><string name="Name">EconomyLogic</string><ProtectedString name="Source"><![CDATA[--[[
 	EconomyLogic — income and value of disaster collectibles.
 
 	A disaster entry is { d = disasterId, m = mutationId|nil, z = originZoneIndex|nil }.
@@ -742,7 +864,7 @@ function EconomyLogic.coreValue(coreId, mutationId, zoneIndex)
 end
 
 return EconomyLogic
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000007"><Properties><string name="Name">EventLogic</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000008"><Properties><string name="Name">EventLogic</string><ProtectedString name="Source"><![CDATA[--[[
 	EventLogic — the 5-minute refresh cycle with a 10-second Chaos Frenzy.
 
 	Timeline for one cycle of length I (default 300 s), with t measured from
@@ -782,7 +904,7 @@ function EventLogic.refreshesBetween(t0, t1, cfg)
 end
 
 return EventLogic
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000008"><Properties><string name="Name">IncubatorLogic</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000009"><Properties><string name="Name">IncubatorLogic</string><ProtectedString name="Source"><![CDATA[--[[
 	IncubatorLogic — incubation timers and progress.
 
 	A pod entry is { s = slot, c = coreId, m = mutation|nil, z = zoneIndex, p = progressSeconds }.
@@ -834,7 +956,100 @@ function IncubatorLogic.hatchMutation(existing, rng, mutationMult)
 end
 
 return IncubatorLogic
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000009"><Properties><string name="Name">RateLimiter</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000A"><Properties><string name="Name">MonetizationLogic</string><ProtectedString name="Source"><![CDATA[--[[
+	MonetizationLogic — pure rules for purchases (unit-tested headlessly).
+]]
+
+local Config = require(script.Parent.Parent.Config.GameConfig)
+local MConfig = require(script.Parent.Parent.Config.MonetizationConfig)
+local SpeedLogic = require(script.Parent.SpeedLogic)
+local IncubatorLogic = require(script.Parent.IncubatorLogic)
+
+local MonetizationLogic = {}
+
+local function owns(data, key)
+	return type(data) == "table" and type(data.passes) == "table" and data.passes[key] == true
+end
+MonetizationLogic.owns = owns
+
+-- Treadmill Speed multiplier: additive, so it can never exceed x3.
+function MonetizationLogic.speedMultiplier(data)
+	local m = 1
+	if owns(data, "TurboTreadmill") then
+		m = m + MConfig.TurboSpeedBonus
+	end
+	if type(data) == "table" and (data.boostSpeed or 0) > 0 then
+		m = m + MConfig.BoostSpeedBonus
+	end
+	return m
+end
+
+function MonetizationLogic.incomeMultiplier(data)
+	if owns(data, "DoubleCash") then
+		return MConfig.DoubleCashMult
+	end
+	return 1
+end
+
+-- Cash Pack: ~10 minutes of BASE income (Double Cash is not applied), with a
+-- floor from the highest unlocked zone so it is useful at every stage.
+function MonetizationLogic.cashPackAmount(baseIncome, speed)
+	local item = MConfig.Items.CashPack
+	local zone = Config.Zones[SpeedLogic.highestUnlockedZone(speed or 0)] or Config.Zones[1]
+	local floorAmount = zone.baseIncome * item.incomeSeconds * item.minimumZoneIncomes
+	local fromIncome = math.max(0, tonumber(baseIncome) or 0) * item.incomeSeconds
+	return math.floor(math.max(fromIncome, floorAmount))
+end
+
+-- Pick the pod Instant Hatch finishes: the requested one if it is still
+-- incubating, otherwise the incubating pod with the most time left.
+-- `inTransit(slot)` excludes pods that are being stolen.
+function MonetizationLogic.pickHatchPod(pods, preferredSlot, inTransit)
+	local best, bestLeft
+	for _, pod in ipairs(pods or {}) do
+		local busy = inTransit and inTransit(pod.s)
+		if not busy and IncubatorLogic.fraction(pod) < 1 then
+			if pod.s == preferredSlot then
+				return pod
+			end
+			local left = IncubatorLogic.remaining(pod)
+			if not bestLeft or left > bestLeft then
+				best, bestLeft = pod, left
+			end
+		end
+	end
+	return best
+end
+
+function MonetizationLogic.hasReceipt(list, purchaseId)
+	for _, id in ipairs(list or {}) do
+		if id == purchaseId then
+			return true
+		end
+	end
+	return false
+end
+
+function MonetizationLogic.addReceipt(list, purchaseId)
+	table.insert(list, purchaseId)
+	while #list > MConfig.ReceiptHistorySize do
+		table.remove(list, 1)
+	end
+end
+
+-- Lookup tables from Roblox id -> item key (only configured items).
+function MonetizationLogic.keysById(itemType)
+	local out = {}
+	for key, item in pairs(MConfig.Items) do
+		if item.type == itemType and type(item.id) == "number" and item.id > 0 then
+			out[item.id] = key
+		end
+	end
+	return out
+end
+
+return MonetizationLogic
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000B"><Properties><string name="Name">RateLimiter</string><ProtectedString name="Source"><![CDATA[--[[
 	RateLimiter — token bucket per key. `clock` is injectable for tests.
 ]]
 
@@ -871,7 +1086,7 @@ function RateLimiter:reset(key)
 end
 
 return RateLimiter
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000A"><Properties><string name="Name">SpawnLogic</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000C"><Properties><string name="Name">SpawnLogic</string><ProtectedString name="Source"><![CDATA[--[[
 	SpawnLogic — weighted core selection and mutation rolls.
 	`rng` is a function returning a float in [0, 1).
 ]]
@@ -949,7 +1164,7 @@ function SpawnLogic.rollMutation(rng, mult)
 end
 
 return SpawnLogic
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000B"><Properties><string name="Name">SpeedLogic</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000D"><Properties><string name="Name">SpeedLogic</string><ProtectedString name="Source"><![CDATA[--[[
 	SpeedLogic — Speed stat math, treadmill step accounting, zone gating.
 ]]
 
@@ -1022,7 +1237,7 @@ function SpeedLogic.tickSteps(state, dt, running)
 end
 
 return SpeedLogic
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000C"><Properties><string name="Name">UpgradeLogic</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000E"><Properties><string name="Name">UpgradeLogic</string><ProtectedString name="Source"><![CDATA[--[[
 	UpgradeLogic — costs and application of base upgrades (pure, data-only).
 ]]
 
@@ -1087,7 +1302,7 @@ function UpgradeLogic.shieldDuration(level)
 end
 
 return UpgradeLogic
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000D"><Properties><string name="Name">WorldLayout</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000F"><Properties><string name="Name">WorldLayout</string><ProtectedString name="Source"><![CDATA[--[[
 	WorldLayout — pure geometry for the map. Both the MapBuilder and the
 	gameplay services use this so positions never drift apart.
 	All positions are {x, y, z} arrays.
@@ -1205,7 +1420,7 @@ function WorldLayout.shieldButtonPosition(slotIndex)
 end
 
 return WorldLayout
-]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX00000013"><Properties><string name="Name">Models</string></Properties><Item class="ModuleScript" referent="RBX0000000F"><Properties><string name="Name">CoreModels</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX00000015"><Properties><string name="Name">Models</string></Properties><Item class="ModuleScript" referent="RBX00000011"><Properties><string name="Name">CoreModels</string><ProtectedString name="Source"><![CDATA[--[[
 	CoreModels — builds the Disaster Core collectibles (the "eggs").
 
 	Every core shares a readable silhouette — a glowing heart inside a
@@ -1489,7 +1704,7 @@ function CoreModels.build(coreId, mutationId, sizeMult)
 end
 
 return CoreModels
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000010"><Properties><string name="Name">DisasterModels</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000012"><Properties><string name="Name">DisasterModels</string><ProtectedString name="Source"><![CDATA[--[[
 	DisasterModels — builds the hatched disaster collectibles that sit on the
 	display pedestals.
 
@@ -2779,7 +2994,7 @@ function DisasterModels.build(disasterId, mutationId)
 end
 
 return DisasterModels
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000011"><Properties><string name="Name">GuardianModels</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000013"><Properties><string name="Name">GuardianModels</string><ProtectedString name="Source"><![CDATA[--[[
 	GuardianModels — builds the big zone guardians that patrol each core nest.
 
 	One builder per `GameConfig.Zones[i].guardian.kind`: Hound (topiary hedge
@@ -3349,7 +3564,7 @@ function GuardianModels.kinds()
 end
 
 return GuardianModels
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000012"><Properties><string name="Name">Kit</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000014"><Properties><string name="Name">Kit</string><ProtectedString name="Source"><![CDATA[--[[
 	Kit — part-construction helpers shared by the world builders and model
 	factories. Everything is plain Parts (no external assets), so the whole game
 	builds from source.
@@ -3583,7 +3798,7 @@ function Kit.text(parent, o)
 end
 
 return Kit
-]]></ProtectedString></Properties></Item></Item><Item class="ModuleScript" referent="RBX00000014"><Properties><string name="Name">Remotes</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item></Item><Item class="ModuleScript" referent="RBX00000016"><Properties><string name="Name">Remotes</string><ProtectedString name="Source"><![CDATA[--[[
 	Remotes — the complete list of network endpoints. The server creates them,
 	clients wait for them. Clients only ever send *intents*; every effect is
 	validated on the server.
@@ -3604,6 +3819,7 @@ Remotes.Events = {
 	-- client -> server
 	"RequestUpgrade", -- (upgradeId)
 	"RequestShield", -- ()
+	"RequestPurchase", -- (itemKey, podSlot?) only opens the Roblox purchase prompt; grants happen in ProcessReceipt
 }
 
 local folder
@@ -3641,7 +3857,7 @@ function Remotes.get(name)
 end
 
 return Remotes
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000015"><Properties><string name="Name">Signal</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000017"><Properties><string name="Name">Signal</string><ProtectedString name="Source"><![CDATA[--[[
 	Signal — tiny synchronous signal for server-side service events.
 	Handlers run in order; an erroring handler is reported and does not stop the rest.
 ]]
@@ -3680,7 +3896,7 @@ function Signal:Fire(...)
 end
 
 return Signal
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000016"><Properties><string name="Name">Util</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000018"><Properties><string name="Name">Util</string><ProtectedString name="Source"><![CDATA[--[[
 	Util — small pure helpers shared by server, client and tests.
 ]]
 
@@ -3793,7 +4009,7 @@ end
 
 return Util
 ]]></ProtectedString></Properties></Item></Item></Item>
-<Item class="ServerScriptService" referent="RBX00000038"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX00000037"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX00000019"><Properties><string name="Name">Main</string><bool name="Disabled">false</bool><token name="RunContext">0</token><ProtectedString name="Source"><![CDATA[--[[
+<Item class="ServerScriptService" referent="RBX0000003B"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX0000003A"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX0000001B"><Properties><string name="Name">Main</string><bool name="Disabled">false</bool><token name="RunContext">0</token><ProtectedString name="Source"><![CDATA[--[[
 	Server bootstrap. Builds the world, then initializes and starts every
 	service in dependency order. Services get the registry `S` in Init so they
 	can call each other (S.CarryService:drop(...), etc.).
@@ -3817,6 +4033,7 @@ local ORDER = {
 	"DisasterCollectionService",
 	"GuardianService",
 	"UpgradeService",
+	"MonetizationService", -- Game Passes + Developer Products (ProcessReceipt)
 	"DevService", -- Studio-only chat commands
 }
 
@@ -3848,7 +4065,7 @@ end
 -- expose for the headless integration tests / Studio command bar debugging
 _G.StealADisaster = S
 print("[Steal a Disaster] server ready")
-]]></ProtectedString></Properties></Item><Item class="Folder" referent="RBX00000028"><Properties><string name="Name">Services</string></Properties><Item class="ModuleScript" referent="RBX0000001A"><Properties><string name="Name">BaseService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="Folder" referent="RBX0000002B"><Properties><string name="Name">Services</string></Properties><Item class="ModuleScript" referent="RBX0000001C"><Properties><string name="Name">BaseService</string><ProtectedString name="Source"><![CDATA[--[[
 	BaseService — base assignment, spawning, base visuals, and base protection.
 
 	* Every slot's base is built once at startup; joining players claim the
@@ -4070,11 +4287,28 @@ function BaseService:refresh(player)
 	b.infoText.Text = Util.formatMoney(income) .. "/s  •  " .. #data.disasters .. "/" .. pedCount .. " disasters  •  Tier " .. tier
 	b.billboardName.Text = player.DisplayName
 	b.billboardInfo.Text = Util.formatMoney(income) .. "/s"
-	local gain = b.treadmill.gainLabel
-	if gain then
-		local SpeedLogic = require(Shared.Logic.SpeedLogic)
-		gain.Text = "+" .. Util.formatNumber(SpeedLogic.gainPerStep(data.upgrades.Treadmill)) .. " SPEED / STEP"
+	self:refreshTreadmillLabel(player)
+end
+
+-- Treadmill screen: Speed per step, the purchase multiplier and Boost time left.
+function BaseService:refreshTreadmillLabel(player)
+	local s = slotOf[player]
+	local data = S.PlayerDataService:get(player)
+	local gain = s and bases[s].treadmill.gainLabel
+	if not gain or not data then
+		return
 	end
+	local SpeedLogic = require(Shared.Logic.SpeedLogic)
+	local MonetizationLogic = require(Shared.Logic.MonetizationLogic)
+	local mult = MonetizationLogic.speedMultiplier(data)
+	local perStep = SpeedLogic.gainPerStep(data.upgrades.Treadmill) * mult
+	local text = "+" .. Util.formatNumber(perStep) .. " SPEED / STEP"
+	if (data.boostSpeed or 0) > 0 then
+		text = text .. "  ⚡x" .. mult .. " " .. Util.formatTime(data.boostSpeed)
+	elseif mult > 1 then
+		text = text .. "  (x" .. mult .. ")"
+	end
+	gain.Text = text
 end
 
 -- Assignment ---------------------------------------------------------------
@@ -4202,7 +4436,7 @@ function BaseService:Start()
 end
 
 return BaseService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000001B"><Properties><string name="Name">CarryService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000001D"><Properties><string name="Name">CarryService</string><ProtectedString name="Source"><![CDATA[--[[
 	CarryService — everything about cores in transit.
 
 	An item is either
@@ -4532,7 +4766,7 @@ function CarryService:Start()
 end
 
 return CarryService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000001C"><Properties><string name="Name">CoreSpawnService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000001E"><Properties><string name="Name">CoreSpawnService</string><ProtectedString name="Source"><![CDATA[--[[
 	CoreSpawnService — the world's temporary Disaster Core opportunities.
 
 	Each zone has a nest with N spawn points. A point holds at most one core
@@ -4821,7 +5055,7 @@ function CoreSpawnService:Start()
 end
 
 return CoreSpawnService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000001D"><Properties><string name="Name">DevService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000001F"><Properties><string name="Name">DevService</string><ProtectedString name="Source"><![CDATA[--[[
 	DevService — Studio-only test commands (disabled in live servers).
 
 	Type in chat while play-testing in Studio:
@@ -4921,7 +5155,7 @@ function DevService:Start()
 end
 
 return DevService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000001E"><Properties><string name="Name">DisasterCollectionService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000020"><Properties><string name="Name">DisasterCollectionService</string><ProtectedString name="Source"><![CDATA[--[[
 	DisasterCollectionService — hatched disasters on display pedestals.
 
 	place(player, pod) turns a finished pod into a disaster on the first free
@@ -5139,7 +5373,7 @@ function DisasterCollectionService:Start()
 end
 
 return DisasterCollectionService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000001F"><Properties><string name="Name">EconomyService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000021"><Properties><string name="Name">EconomyService</string><ProtectedString name="Source"><![CDATA[--[[
 	EconomyService — passive income and all money mutations.
 
 	Income is paid once per second from the disasters on display. All money
@@ -5152,6 +5386,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local EconomyLogic = require(Shared.Logic.EconomyLogic)
+local MonetizationLogic = require(Shared.Logic.MonetizationLogic)
 local Util = require(Shared.Util)
 
 local EconomyService = { Name = "EconomyService" }
@@ -5173,7 +5408,7 @@ function EconomyService:recompute(player)
 		incomeCache[player] = 0
 		return 0
 	end
-	local inc = EconomyLogic.totalIncome(data.disasters)
+	local inc = EconomyLogic.totalIncome(data.disasters) * MonetizationLogic.incomeMultiplier(data)
 	incomeCache[player] = inc
 	player:SetAttribute("Income", inc)
 	return inc
@@ -5252,7 +5487,7 @@ function EconomyService:Start()
 end
 
 return EconomyService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000020"><Properties><string name="Name">EventService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000022"><Properties><string name="Name">EventService</string><ProtectedString name="Source"><![CDATA[--[[
 	EventService — the 5-minute world refresh and the 10-second Chaos Frenzy.
 
 	Timeline (EventLogic): Normal → Warning (last 30 s) → refresh + Frenzy (10 s).
@@ -5380,7 +5615,7 @@ function EventService:Start()
 end
 
 return EventService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000021"><Properties><string name="Name">GuardianService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000023"><Properties><string name="Name">GuardianService</string><ProtectedString name="Source"><![CDATA[--[[
 	GuardianService — one guardian per zone protecting its nest.
 
 	State machine (server-side, anchored models moved by PivotTo):
@@ -5678,7 +5913,7 @@ function GuardianService:Start()
 end
 
 return GuardianService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000022"><Properties><string name="Name">IncubatorService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000024"><Properties><string name="Name">IncubatorService</string><ProtectedString name="Source"><![CDATA[--[[
 	IncubatorService — pods at each base turn cores into disasters.
 
 	* receive(player, entry) puts a delivered core into the first free pod, or
@@ -5751,6 +5986,15 @@ local function unitFor(player, slot)
 	return base and base.pods[slot] or nil
 end
 
+-- Instant Hatch prompt: only while the pod is incubating and not being stolen
+-- (the client shows it only on its own base).
+local function setHatchPrompt(unit, on)
+	local prompt = unit and unit.root:FindFirstChild("HatchPrompt")
+	if prompt and prompt.Enabled ~= on then
+		prompt.Enabled = on
+	end
+end
+
 function IncubatorService:_clearVisual(player, slot)
 	local v = visuals[player] and visuals[player][slot]
 	if v then
@@ -5770,6 +6014,7 @@ function IncubatorService:_clearVisual(player, slot)
 		if prompt then
 			prompt.Enabled = false
 		end
+		setHatchPrompt(unit, false)
 	end
 end
 
@@ -5827,6 +6072,7 @@ function IncubatorService:_updateVisual(player, pod)
 	unit.fill.Size = Vector3.new(h, unit.fill.Size.Y, unit.fill.Size.Z)
 	unit.fill.CFrame = CFrame.new(unit.basePos + Vector3.new(0, 1.45 + h / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2)
 	v.bar.Size = UDim2.new(frac, 0, 1, 0)
+	setHatchPrompt(unit, frac < 1 and not self:isInTransit(player, pod.s))
 	if self:isInTransit(player, pod.s) then
 		v.timer.Text = "STOLEN! CHASE THEM!"
 		v.timer.TextColor3 = Color3.fromRGB(255, 80, 80)
@@ -5952,6 +6198,20 @@ function IncubatorService:tryHatchAll(player)
 	end
 end
 
+-- Instant Hatch: complete one pod exactly as if its timer ran out. The normal
+-- hatch path then rolls mutation and places the disaster, so rarity, mutation
+-- chance and value are unchanged.
+function IncubatorService:finishPod(player, pod)
+	if not pod or self:isInTransit(player, pod.s) then
+		return false
+	end
+	pod.p = IncubatorLogic.incubationTime(pod.c, pod.z)
+	self:_updateVisual(player, pod)
+	S.PlayerDataService:markDirty(player)
+	self:_tryHatch(player, pod)
+	return true
+end
+
 function IncubatorService:onCapacityChanged(player)
 	self:fillFromStorage(player)
 	self:tryHatchAll(player)
@@ -6032,6 +6292,23 @@ function IncubatorService:_wirePrompts()
 			prompt.Triggered:Connect(function(thief)
 				S.StealService:tryStealFromBase(thief, slot, i)
 			end)
+			local hatch = Instance.new("ProximityPrompt")
+			hatch.Name = "HatchPrompt"
+			hatch.ActionText = "Instant Hatch"
+			hatch.ObjectText = "🥚 Finish this pod now"
+			hatch.HoldDuration = 0
+			hatch.MaxActivationDistance = 8
+			hatch.RequiresLineOfSight = false
+			hatch.Enabled = false
+			hatch:SetAttribute("BaseSlot", slot)
+			hatch:SetAttribute("OwnerOnly", true)
+			hatch:SetAttribute("Range", 8)
+			hatch.Parent = unit.root
+			hatch.Triggered:Connect(function(player)
+				if S.BaseService:slotOf(player) == slot and S.MonetizationService then
+					S.MonetizationService:requestPurchase(player, "InstantHatch", { podSlot = i })
+				end
+			end)
 		end
 	end
 end
@@ -6097,7 +6374,341 @@ function IncubatorService:_transit()
 end
 
 return IncubatorService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000023"><Properties><string name="Name">PlayerDataService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000025"><Properties><string name="Name">MonetizationService</string><ProtectedString name="Source"><![CDATA[--[[
+	MonetizationService — Game Passes and Developer Products (server only).
+
+	Developer Products are granted ONLY in MarketplaceService.ProcessReceipt:
+	  * unknown player / data not loaded / unsaved session -> NotProcessedYet
+	    (Roblox retries later, e.g. when the player rejoins);
+	  * PurchaseId already recorded -> PurchaseGranted without granting again;
+	  * otherwise grant, record the PurchaseId in the player's saved data, save,
+	    and only then return PurchaseGranted. If the save fails we return
+	    NotProcessedYet; the retry finds the recorded PurchaseId and does not
+	    grant twice.
+
+	Game Passes are verified with UserOwnsGamePassAsync on join and cached in
+	saved data, so the entitlement survives reconnects and API outages.
+
+	The RequestPurchase remote never grants anything on a live server: it only
+	opens Roblox's purchase prompt. In Studio, items whose id is still 0 use a
+	mock purchase that runs the same grant code (no Robux involved).
+]]
+
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config.GameConfig)
+local MConfig = require(Shared.Config.MonetizationConfig)
+local MonetizationLogic = require(Shared.Logic.MonetizationLogic)
+local EconomyLogic = require(Shared.Logic.EconomyLogic)
+local RateLimiter = require(Shared.Logic.RateLimiter)
+local Util = require(Shared.Util)
+local Remotes = require(Shared.Remotes)
+
+local MonetizationService = { Name = "MonetizationService" }
+
+local S
+local limiter
+local productKeyById = {}
+local passKeyById = {}
+local pendingHatch = {} -- [player] = podSlot the player asked to hatch
+local mockCounter = 0
+
+function MonetizationService:Init(registry)
+	S = registry
+	limiter = RateLimiter.new(1, 3)
+	productKeyById = MonetizationLogic.keysById("DeveloperProduct")
+	passKeyById = MonetizationLogic.keysById("GamePass")
+end
+
+function MonetizationService:mockEnabled()
+	return MConfig.MockInStudio == true and RunService:IsStudio()
+end
+
+local function notify(player, text, kind)
+	S.PlayerDataService:notify(player, text, kind or "success")
+end
+
+function MonetizationService:_applyEffects(player)
+	local data = S.PlayerDataService:get(player)
+	if not data then
+		return
+	end
+	player:SetAttribute("SpeedMult", MonetizationLogic.speedMultiplier(data))
+	player:SetAttribute("BoostSeconds", math.ceil(data.boostSpeed or 0))
+	S.EconomyService:recompute(player)
+	S.BaseService:refresh(player)
+	S.PlayerDataService:markDirty(player)
+end
+
+-- Game Passes -------------------------------------------------------------------
+function MonetizationService:owns(player, key)
+	return MonetizationLogic.owns(S.PlayerDataService:get(player), key)
+end
+
+function MonetizationService:grantPass(player, key)
+	local data = S.PlayerDataService:get(player)
+	local item = MConfig.Items[key]
+	if not data or not item or item.type ~= "GamePass" or data.passes[key] then
+		return false
+	end
+	data.passes[key] = true
+	self:_applyEffects(player)
+	notify(player, item.icon .. " " .. item.name .. " unlocked! " .. item.benefit .. ".")
+	return true
+end
+
+-- Re-check every configured pass with Roblox. A failed API call keeps the
+-- cached entitlement; a successful "not owned" (e.g. refund) removes it.
+function MonetizationService:refreshPasses(player)
+	for key, item in pairs(MConfig.Items) do
+		if item.type == "GamePass" and item.id > 0 then
+			local ok, owned = pcall(function()
+				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, item.id)
+			end)
+			local data = S.PlayerDataService:get(player)
+			if player.Parent ~= Players or not data then
+				return
+			end
+			if ok then
+				data.passes[key] = owned == true or nil
+			end
+		end
+	end
+	self:_applyEffects(player)
+end
+
+-- Developer Products ------------------------------------------------------------
+function MonetizationService:_instantHatch(player, preferredSlot)
+	local data = S.PlayerDataService:get(player)
+	local pod = MonetizationLogic.pickHatchPod(data.pods, preferredSlot, function(slot)
+		return S.IncubatorService:isInTransit(player, slot)
+	end)
+	if pod and S.IncubatorService:finishPod(player, pod) then
+		notify(player, "🥚 Instant Hatch! " .. Config.Cores[pod.c].name .. " is done.")
+		return true
+	end
+	-- nothing to hatch right now: keep it as a credit so the purchase is never lost
+	data.hatchCredits = data.hatchCredits + 1
+	S.PlayerDataService:markDirty(player)
+	notify(player, "🥚 No pod was incubating — your Instant Hatch is saved for later.", "info")
+	return true
+end
+
+-- Apply one Developer Product. Must not yield (it runs before the receipt is recorded).
+function MonetizationService:grantProduct(player, key)
+	local data = S.PlayerDataService:get(player)
+	local item = MConfig.Items[key]
+	if not data or not item or item.type ~= "DeveloperProduct" then
+		return false
+	end
+	if key == "InstantHatch" then
+		local slot = pendingHatch[player]
+		pendingHatch[player] = nil
+		return self:_instantHatch(player, slot)
+	elseif key == "SpeedBoost" then
+		data.boostSpeed = (data.boostSpeed or 0) + item.durationSeconds
+		self:_applyEffects(player)
+		notify(player, "⚡ Speed Boost active: x" .. MonetizationLogic.speedMultiplier(data) .. " treadmill Speed for " .. Util.formatTime(data.boostSpeed) .. ".")
+		return true
+	elseif key == "CashPack" then
+		local amount = MonetizationLogic.cashPackAmount(EconomyLogic.totalIncome(data.disasters), data.speed)
+		S.EconomyService:addMoney(player, amount, "cashpack")
+		notify(player, "💵 Cash Pack: +" .. Util.formatMoney(amount) .. "!")
+		return true
+	end
+	return false
+end
+
+-- Shared by ProcessReceipt and the Studio mock. Returns a ProductPurchaseDecision.
+function MonetizationService:_grantReceipt(player, key, purchaseId)
+	local NOT_YET = Enum.ProductPurchaseDecision.NotProcessedYet
+	local data = S.PlayerDataService:get(player)
+	if not data or not S.PlayerDataService:canGrantPurchases(player) then
+		return NOT_YET
+	end
+	if MonetizationLogic.hasReceipt(data.receipts, purchaseId) then
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+	local ok, granted = pcall(self.grantProduct, self, player, key)
+	if not ok or not granted then
+		warn("[Monetization] could not grant " .. tostring(key) .. " to " .. player.Name .. ": " .. tostring(granted))
+		return NOT_YET
+	end
+	-- recorded in the same data document as the reward, so they persist together
+	MonetizationLogic.addReceipt(data.receipts, purchaseId)
+	S.PlayerDataService:markDirty(player)
+	if not S.PlayerDataService:saveForReceipt(player) then
+		return NOT_YET
+	end
+	return Enum.ProductPurchaseDecision.PurchaseGranted
+end
+
+function MonetizationService:processReceipt(receipt)
+	local NOT_YET = Enum.ProductPurchaseDecision.NotProcessedYet
+	if type(receipt) ~= "table" or receipt.PurchaseId == nil then
+		return NOT_YET
+	end
+	local key = productKeyById[receipt.ProductId]
+	if not key then
+		warn("[Monetization] receipt for unknown product " .. tostring(receipt.ProductId))
+		return NOT_YET
+	end
+	local player = Players:GetPlayerByUserId(receipt.PlayerId)
+	if not player then
+		return NOT_YET
+	end
+	return self:_grantReceipt(player, key, tostring(receipt.PurchaseId))
+end
+
+-- Purchase requests (prompts) ------------------------------------------------------
+-- Opens Roblox's purchase prompt. On a live server this never grants anything.
+function MonetizationService:requestPurchase(player, key, opts)
+	if not limiter:allow(player) then
+		return false, "rate"
+	end
+	local item = type(key) == "string" and MConfig.Items[key] or nil
+	local data = S.PlayerDataService:get(player)
+	if not item or not data then
+		return false, "invalid"
+	end
+	if item.type == "GamePass" and data.passes[key] then
+		notify(player, "You already own " .. item.name .. ".", "info")
+		return false, "owned"
+	end
+	if key == "InstantHatch" then
+		local slot = type(opts) == "table" and tonumber(opts.podSlot) or nil
+		local inTransit = function(s)
+			return S.IncubatorService:isInTransit(player, s)
+		end
+		local pod = MonetizationLogic.pickHatchPod(data.pods, slot, inTransit)
+		if not pod then
+			notify(player, "No core is incubating right now.", "info")
+			return false, "no pod"
+		end
+		if data.hatchCredits > 0 then
+			data.hatchCredits = data.hatchCredits - 1
+			S.IncubatorService:finishPod(player, pod)
+			S.PlayerDataService:markDirty(player)
+			notify(player, "🥚 Used a saved Instant Hatch on " .. Config.Cores[pod.c].name .. ".")
+			return true, "credit"
+		end
+		pendingHatch[player] = pod.s
+	end
+	if item.id > 0 then
+		local ok, err = pcall(function()
+			if item.type == "GamePass" then
+				MarketplaceService:PromptGamePassPurchase(player, item.id)
+			else
+				MarketplaceService:PromptProductPurchase(player, item.id)
+			end
+		end)
+		if not ok then
+			warn("[Monetization] prompt failed: " .. tostring(err))
+			return false, "prompt failed"
+		end
+		return true, "prompted"
+	end
+	if self:mockEnabled() then
+		mockCounter = mockCounter + 1
+		if item.type == "GamePass" then
+			self:grantPass(player, key)
+		else
+			self:_grantReceipt(player, key, "studio-mock-" .. tostring(player.UserId) .. "-" .. mockCounter)
+		end
+		notify(player, "[Studio test purchase — no Robux spent]", "info")
+		return true, "mock"
+	end
+	notify(player, item.name .. " isn't available yet.", "info")
+	return false, "unconfigured"
+end
+
+-- World prompts ----------------------------------------------------------------------
+function MonetizationService:_wireTreadmillPrompts()
+	for slot = 1, #Config.Bases.Slots do
+		local base = S.BaseService:base(slot)
+		local console = base and base.treadmill and base.treadmill.console
+		if console then
+			local prompt = Instance.new("ProximityPrompt")
+			prompt.Name = "BoostPrompt"
+			prompt.ActionText = "Speed Boost"
+			prompt.ObjectText = "⚡ 2× treadmill Speed • 15 min"
+			prompt.HoldDuration = 0
+			prompt.MaxActivationDistance = 7
+			prompt.RequiresLineOfSight = false
+			prompt:SetAttribute("BaseSlot", slot)
+			prompt:SetAttribute("OwnerOnly", true)
+			prompt:SetAttribute("Range", 7)
+			prompt.Parent = console
+			prompt.Triggered:Connect(function(player)
+				if S.BaseService:slotOf(player) == slot then
+					self:requestPurchase(player, "SpeedBoost")
+				end
+			end)
+		end
+	end
+end
+
+function MonetizationService:Start()
+	MarketplaceService.ProcessReceipt = function(receipt)
+		return self:processReceipt(receipt)
+	end
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
+		local key = passKeyById[passId]
+		if purchased and key then
+			self:grantPass(player, key)
+		end
+	end)
+	Remotes.get("RequestPurchase").OnServerEvent:Connect(function(player, key, podSlot)
+		self:requestPurchase(player, key, { podSlot = podSlot })
+	end)
+	S.PlayerDataService.Loaded:Connect(function(player)
+		self:_applyEffects(player)
+		task.spawn(function()
+			self:refreshPasses(player)
+		end)
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		pendingHatch[player] = nil
+	end)
+	self:_wireTreadmillPrompts()
+
+	-- Speed Boost counts down only while the player is in game
+	local acc = 0
+	RunService.Heartbeat:Connect(function(dt)
+		acc = acc + dt
+		if acc < 1 then
+			return
+		end
+		local elapsed = math.min(acc, 5)
+		acc = 0
+		for _, player in ipairs(S.PlayerDataService:loadedPlayers()) do
+			local data = S.PlayerDataService:get(player)
+			if data and (data.boostSpeed or 0) > 0 then
+				data.boostSpeed = math.max(0, data.boostSpeed - elapsed)
+				player:SetAttribute("BoostSeconds", math.ceil(data.boostSpeed))
+				S.PlayerDataService:markDirty(player)
+				if data.boostSpeed <= 0 then
+					self:_applyEffects(player)
+					notify(player, "⚡ Speed Boost ended.", "info")
+				else
+					S.BaseService:refreshTreadmillLabel(player)
+				end
+			end
+		end
+	end)
+end
+
+-- test hooks
+function MonetizationService:_pendingHatch()
+	return pendingHatch
+end
+
+return MonetizationService
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000026"><Properties><string name="Name">PlayerDataService</string><ProtectedString name="Source"><![CDATA[--[[
 	PlayerDataService — loading, saving and syncing player data.
 
 	* DataStore UpdateAsync with retries and a soft session lock (another server
@@ -6120,9 +6731,11 @@ local Config = require(Shared.Config.GameConfig)
 local DataSchema = require(Shared.Logic.DataSchema)
 local UpgradeLogic = require(Shared.Logic.UpgradeLogic)
 local SpeedLogic = require(Shared.Logic.SpeedLogic)
+local EconomyLogic = require(Shared.Logic.EconomyLogic)
 local Util = require(Shared.Util)
 local Signal = require(Shared.Signal)
 local Remotes = require(Shared.Remotes)
+local MonetizationLogic = require(Shared.Logic.MonetizationLogic)
 
 local PlayerDataService = { Name = "PlayerDataService" }
 PlayerDataService.Loaded = Signal.new() -- (player, data, offlineSeconds)
@@ -6223,6 +6836,7 @@ function PlayerDataService:_onPlayerAdded(player)
 	if status == "memory" or status == "failed" then
 		session.noSave = true
 	end
+	session.memoryOnly = status == "memory"
 	local data = DataSchema.sanitize(raw)
 	local offline = 0
 	if data.lastSeen > 0 then
@@ -6272,6 +6886,31 @@ function PlayerDataService:markDirty(player)
 	s.dirty = true
 	s.syncPending = true
 	self.Changed:Fire(player)
+end
+
+-- Purchases may only be granted into a session that will be saved (or a Studio
+-- memory session). A live session whose load FAILED runs on defaults; granting
+-- there would lose the purchase, so ProcessReceipt must retry later instead.
+function PlayerDataService:canGrantPurchases(player)
+	local s = sessions[player]
+	return s ~= nil and s.loaded and (not s.noSave or s.memoryOnly == true)
+end
+
+-- Save now and report whether it reached the DataStore. Waits for an in-flight
+-- save so the snapshot written includes the latest changes (receipt records).
+function PlayerDataService:saveForReceipt(player)
+	local s = sessions[player]
+	if not s or not s.loaded then
+		return false
+	end
+	local deadline = os.clock() + 15
+	while s.saving and os.clock() < deadline do
+		task.wait(0.1)
+	end
+	if s.saving then
+		return false
+	end
+	return self:save(player, false)
 end
 
 function PlayerDataService:loadedPlayers()
@@ -6379,6 +7018,12 @@ function PlayerDataService:snapshot(player)
 		nextZoneReq = nextZone and nextZone.speedReq or 0,
 		stats = Util.deepCopy(data.stats),
 		shieldUntil = player:GetAttribute("ShieldUntil") or 0,
+		passes = Util.deepCopy(data.passes),
+		boostSpeed = data.boostSpeed,
+		hatchCredits = data.hatchCredits,
+		speedMult = MonetizationLogic.speedMultiplier(data),
+		incomeMult = MonetizationLogic.incomeMultiplier(data),
+		cashPack = MonetizationLogic.cashPackAmount(EconomyLogic.totalIncome(data.disasters), data.speed),
 	}
 end
 
@@ -6456,7 +7101,7 @@ function PlayerDataService:_sessions()
 end
 
 return PlayerDataService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000024"><Properties><string name="Name">SpeedService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000027"><Properties><string name="Name">SpeedService</string><ProtectedString name="Source"><![CDATA[--[[
 	SpeedService — treadmill training and WalkSpeed.
 
 	Steps are counted on the server only: a player earns steps while their root
@@ -6474,6 +7119,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local SpeedLogic = require(Shared.Logic.SpeedLogic)
+local MonetizationLogic = require(Shared.Logic.MonetizationLogic)
 local Util = require(Shared.Util)
 
 local SpeedService = { Name = "SpeedService" }
@@ -6526,7 +7172,7 @@ function SpeedService:addSteps(player, steps)
 	if not data or steps <= 0 then
 		return 0
 	end
-	local gain = SpeedLogic.gainPerStep(data.upgrades.Treadmill) * steps
+	local gain = SpeedLogic.gainPerStep(data.upgrades.Treadmill) * steps * MonetizationLogic.speedMultiplier(data)
 	data.speed = data.speed + gain
 	data.steps = data.steps + steps
 	return gain
@@ -6603,7 +7249,7 @@ function SpeedService:Start()
 end
 
 return SpeedService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000025"><Properties><string name="Name">StealService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000028"><Properties><string name="Name">StealService</string><ProtectedString name="Source"><![CDATA[--[[
 	StealService — validates every steal attempt on the server.
 
 	tryStealWorld(player, entity)       from a zone nest (ProximityPrompt)
@@ -6754,7 +7400,7 @@ function StealService:tryStealFromBase(thief, slot, podSlot)
 end
 
 return StealService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000026"><Properties><string name="Name">UpgradeService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000029"><Properties><string name="Name">UpgradeService</string><ProtectedString name="Source"><![CDATA[--[[
 	UpgradeService — the only way to spend money on progression.
 
 	Client sends RequestUpgrade(upgradeId). The server rate-limits, validates the
@@ -6825,7 +7471,7 @@ function UpgradeService:Start()
 end
 
 return UpgradeService
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000027"><Properties><string name="Name">ZoneService</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000002A"><Properties><string name="Name">ZoneService</string><ProtectedString name="Source"><![CDATA[--[[
 	ZoneService — builds the world and tracks which zone each player is in.
 
 	Player attribute "Zone": 0 = hub/bases, 1..9 = route zone, -1 = out of bounds.
@@ -6912,7 +7558,7 @@ function ZoneService:Start()
 end
 
 return ZoneService
-]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX00000036"><Properties><string name="Name">World</string></Properties><Item class="ModuleScript" referent="RBX00000029"><Properties><string name="Name">BaseBuilder</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX00000039"><Properties><string name="Name">World</string></Properties><Item class="ModuleScript" referent="RBX0000002C"><Properties><string name="Name">BaseBuilder</string><ProtectedString name="Source"><![CDATA[--[[
 	BaseBuilder — the physical player base: a "storm shelter lab" on a raised
 	concrete pad with walls on three sides, open front toward the avenue,
 	incubator pods along the back, display pedestals in the middle, a treadmill,
@@ -7021,7 +7667,7 @@ local function buildTreadmill(model, slotIndex, cf)
 	Kit.text(tag, { name = "Text", text = "🏃 TREADMILL", color = TRIM, font = Enum.Font.LuckiestGuy })
 	-- conveyor: the belt pushes toward local -X; running toward the console keeps you in place
 	belt.AssemblyLinearVelocity = rot:VectorToWorldSpace(Vector3.new(-Config.Speed.BeltSpeed, 0, 0))
-	return { model = m, belt = belt, frame = frame, gainLabel = sg:FindFirstChild("Gain") }
+	return { model = m, belt = belt, frame = frame, console = console, gainLabel = sg:FindFirstChild("Gain") }
 end
 
 local function buildTerminal(model, pos, rot, title, color, icon)
@@ -7170,7 +7816,7 @@ function BaseBuilder.build(parent, slotIndex)
 end
 
 return BaseBuilder
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000002A"><Properties><string name="Name">MapBuilder</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000002D"><Properties><string name="Name">MapBuilder</string><ProtectedString name="Source"><![CDATA[--[[
 	MapBuilder — builds the static world from config at server start:
 	lighting baseline, the starting hub (Storm Research Plaza), the long central
 	route with a gate arch per zone, a nest per zone and boundaries.
@@ -7621,7 +8267,7 @@ function MapBuilder.build()
 end
 
 return MapBuilder
-]]></ProtectedString></Properties></Item><Item class="Folder" referent="RBX00000035"><Properties><string name="Name">Zones</string></Properties><Item class="ModuleScript" referent="RBX0000002B"><Properties><string name="Name">DeepAbyss</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="Folder" referent="RBX00000038"><Properties><string name="Name">Zones</string></Properties><Item class="ModuleScript" referent="RBX0000002E"><Properties><string name="Name">DeepAbyss</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 6 — Deep Abyss. The ocean drained out of this trench long ago and
 	forgot to take the pressure with it: a dark slate-and-sand seabed between
 	towering rock walls, branching coral that still glows at the tips, giant
@@ -8060,7 +8706,7 @@ return function(ctx)
 		},
 	}
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000002C"><Properties><string name="Name">Droughtlands</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000002F"><Properties><string name="Name">Droughtlands</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 3 — Droughtlands. "Nothing grows. Everything cracks."
 	A sun-baked clay pan split by dark crack lines (a few still glowing with
 	trapped heat), a dry riverbed snaking across the route, banded sandstone
@@ -8494,7 +9140,7 @@ return function(ctx)
 		},
 	}
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000002D"><Properties><string name="Name">Frostfall</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000030"><Properties><string name="Name">Frostfall</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 4 — Frostfall. "The cold bites back."
 	A snowbound pass: packed-snow trail over deep snow with glacier and ice
 	sheets, wind-carved drifts banked against the walls, snow-capped pines,
@@ -8917,7 +9563,7 @@ return function(ctx)
 		},
 	}
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000002E"><Properties><string name="Name">Generic</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000031"><Properties><string name="Name">Generic</string><ProtectedString name="Source"><![CDATA[--[[
 	Generic fallback zone builder: used only when a zone has no dedicated
 	builder in World/Zones/<ZoneId>.lua. Gives each zone a distinct ground
 	material/color and simple props so the route is always playable.
@@ -8951,7 +9597,7 @@ return function(ctx)
 	end
 	return { palette = { accent = pal.accent, gate = Kit.shade(pal.ground, 0.6), nest = Kit.shade(pal.ground, 0.7) } }
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000002F"><Properties><string name="Name">MagmaBasin</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000032"><Properties><string name="Name">MagmaBasin</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 5 — Magma Basin. "The ground is the disaster."
 	A scorched basin of basalt and cracked lava rock: a glowing lava river
 	cuts across the route under a dark basalt bridge, lava pools simmer at
@@ -9397,7 +10043,7 @@ return function(ctx)
 		},
 	}
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000030"><Properties><string name="Name">Overgrowth</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000033"><Properties><string name="Name">Overgrowth</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 2 — Overgrowth. "Nature fights back."
 	An ancient stone road swallowed by the forest: a muddy trail over broken
 	cobbles, giant spotted mushrooms (some glowing underneath), crumbling ruin
@@ -9897,7 +10543,7 @@ return function(ctx)
 		},
 	}
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000031"><Properties><string name="Name">Prehistoric</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000034"><Properties><string name="Name">Prehistoric</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 7 — Prehistoric. A steaming jungle that time forgot: mud trails
 	through fern-choked clearings, umbrella-crowned conifers, stubby cycads,
 	bubbling tar pits and layered stone ridges. The route runs straight under
@@ -10339,7 +10985,7 @@ return function(ctx)
 		},
 	}
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000032"><Properties><string name="Name">Skylands</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000035"><Properties><string name="Name">Skylands</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 8 — Skylands. Floating islands adrift on a sea of cloud, where storms
 	are born. The route is a long grassy island with rocky cliffs underneath;
 	side islands hang at different heights with waterfalls pouring into the
@@ -10700,7 +11346,7 @@ return function(ctx)
 		},
 	}
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000033"><Properties><string name="Name">Suburb</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000036"><Properties><string name="Name">Suburb</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 1 — Suburb. A quiet cul-de-sac that's clearly been through some
 	weather: pastel houses, picket fences, a road that loops around the core
 	nest, a tornado-flattened backyard behind it.
@@ -10893,7 +11539,7 @@ return function(ctx)
 		},
 	}
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000034"><Properties><string name="Name">VoidRealm</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000037"><Properties><string name="Name">VoidRealm</string><ProtectedString name="Source"><![CDATA[--[[
 	Zone 9 — Void Realm. The end of the route, where disasters go to die: a
 	black obsidian plain split by glowing purple fissures, monoliths humming
 	with light, vertical rifts torn in the air, and shattered fragments of
@@ -11208,7 +11854,7 @@ return function(ctx)
 	}
 end
 ]]></ProtectedString></Properties></Item></Item></Item></Item></Item>
-<Item class="StarterPlayer" referent="RBX00000044"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX00000043"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX00000042"><Properties><string name="Name">Client</string></Properties><Item class="LocalScript" referent="RBX00000039"><Properties><string name="Name">Main</string><bool name="Disabled">false</bool><ProtectedString name="Source"><![CDATA[--[[
+<Item class="StarterPlayer" referent="RBX00000047"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX00000046"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX00000045"><Properties><string name="Name">Client</string></Properties><Item class="LocalScript" referent="RBX0000003C"><Properties><string name="Name">Main</string><bool name="Disabled">false</bool><ProtectedString name="Source"><![CDATA[--[[
 	Client bootstrap: HUD, panels, announcer, world presentation.
 	The client only renders state and sends intents; all logic is on the server.
 ]]
@@ -11317,7 +11963,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
 end)
 
 _G.StealADisasterClient = { State = State, Panels = Panels, Screen = screen }
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000003A"><Properties><string name="Name">State</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000003D"><Properties><string name="Name">State</string><ProtectedString name="Source"><![CDATA[--[[
 	State — the latest server snapshot for the local player.
 ]]
 
@@ -11342,7 +11988,7 @@ function State.get()
 end
 
 return State
-]]></ProtectedString></Properties></Item><Item class="Folder" referent="RBX0000003F"><Properties><string name="Name">UI</string></Properties><Item class="ModuleScript" referent="RBX0000003B"><Properties><string name="Name">Announcer</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="Folder" referent="RBX00000042"><Properties><string name="Name">UI</string></Properties><Item class="ModuleScript" referent="RBX0000003E"><Properties><string name="Name">Announcer</string><ProtectedString name="Source"><![CDATA[--[[
 	Announcer — big center banners (zone entry, run home, delivered, hatches,
 	events, breaches) and small toasts for notifications.
 ]]
@@ -11518,7 +12164,7 @@ function Announcer.mount(screen)
 end
 
 return Announcer
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000003C"><Properties><string name="Name">Hud</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000003F"><Properties><string name="Name">Hud</string><ProtectedString name="Source"><![CDATA[--[[
 	Hud — minimal always-on HUD.
 
 	top-center    money + income/s
@@ -11649,7 +12295,7 @@ function Hud.mount(screen)
 end
 
 return Hud
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000003D"><Properties><string name="Name">Panels</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000040"><Properties><string name="Name">Panels</string><ProtectedString name="Source"><![CDATA[--[[
 	Panels — the left navigation and the two modal panels (Shop, Index).
 
 	Compact left column of chunky square buttons; one centered panel at a time
@@ -11831,7 +12477,83 @@ local function buildShop(screen)
 	if State.get() then
 		refresh(State.get())
 	end
+	Panels._buildBoosts(body)
 	return p
+end
+
+-- Boosts (Robux) ------------------------------------------------------------------
+-- Rows below the upgrades. Prices come from Roblox (GetProductInfo); the configured
+-- intendedPrice is shown only for Studio mock items. Buttons only ask the server to
+-- open Roblox's purchase prompt.
+function Panels._buildBoosts(body)
+	local MConfig = require(Shared.Config.MonetizationConfig)
+	local MarketplaceService = game:GetService("MarketplaceService")
+	local RunService = game:GetService("RunService")
+	Theme.label(body, { name = "BoostsHeader", text = "⭐ BOOSTS", size = UDim2.new(1, -12, 0, 34), font = Theme.FontDisplay, color = Theme.Orange, order = 100, z = 12, strokeThickness = 2 })
+	local rows = {}
+	for j, key in ipairs(MConfig.BoostsOrder) do
+		local item = MConfig.Items[key]
+		local row = Theme.frame(body, { name = "Boost_" .. key, size = UDim2.new(1, -12, 0, 76), color = Theme.White, corner = 10, order = 100 + j, z = 12 })
+		Theme.label(row, { name = "Icon", text = item.icon, size = UDim2.new(0, 56, 0, 56), position = UDim2.new(0, 10, 0.5, 0), anchor = Vector2.new(0, 0.5), stroke = false, z = 13 })
+		Theme.label(row, { name = "BoostName", text = item.name, size = UDim2.new(0.5, 0, 0.44, 0), position = UDim2.new(0, 76, 0.08, 0), xAlign = Enum.TextXAlignment.Left, color = Theme.Ink, stroke = false, z = 13 })
+		local effect = Theme.label(row, { name = "Effect", text = item.benefit, size = UDim2.new(0.55, 0, 0.34, 0), position = UDim2.new(0, 76, 0.56, 0), xAlign = Enum.TextXAlignment.Left, color = Color3.fromRGB(90, 90, 110), stroke = false, z = 13 })
+		local buy = Theme.button(row, {
+			name = "Buy",
+			text = "…",
+			color = Theme.Orange,
+			size = UDim2.new(0, 130, 0, 52),
+			position = UDim2.new(1, -10, 0.5, 0),
+			anchor = Vector2.new(1, 0.5),
+			z = 14,
+			onClick = function()
+				Remotes.get("RequestPurchase"):FireServer(key)
+			end,
+		})
+		rows[key] = { row = row, buy = buy, effect = effect, price = "…" }
+	end
+	local function refresh(snap)
+		for key, r in pairs(rows) do
+			local item = MConfig.Items[key]
+			local owned = snap and snap.passes and snap.passes[key]
+			if owned then
+				Theme.setButtonText(r.buy, "OWNED ✓")
+				r.buy.BackgroundColor3 = Theme.Gray
+				r.buy.Active = false
+			else
+				Theme.setButtonText(r.buy, r.price)
+				r.buy.BackgroundColor3 = Theme.Orange
+				r.buy.Active = true
+			end
+			if key == "CashPack" and snap and snap.cashPack then
+				r.effect.Text = "+" .. Util.formatMoney(snap.cashPack) .. " now (≈10 min of income)"
+			elseif item.type == "GamePass" and snap and owned then
+				r.effect.Text = item.benefit .. " — active"
+			end
+		end
+	end
+	State.Changed:Connect(refresh)
+	task.spawn(function()
+		for key, r in pairs(rows) do
+			local item = MConfig.Items[key]
+			if item.id > 0 then
+				local ok, info = pcall(function()
+					local infoType = (item.type == "GamePass") and Enum.InfoType.GamePass or Enum.InfoType.Product
+					return MarketplaceService:GetProductInfo(item.id, infoType)
+				end)
+				if ok and type(info) == "table" and info.PriceInRobux then
+					r.price = "R$ " .. tostring(info.PriceInRobux)
+				else
+					r.price = "BUY" -- Roblox's own dialog shows the real price
+				end
+			elseif MConfig.MockInStudio and RunService:IsStudio() then
+				r.price = "R$ " .. item.intendedPrice .. " (test)"
+			else
+				r.row.Visible = false -- not created on Roblox yet: never sell it
+			end
+		end
+		refresh(State.get())
+	end)
+	refresh(State.get())
 end
 
 -- Index ----------------------------------------------------------------------------
@@ -12027,7 +12749,7 @@ function Panels.mount(screen)
 end
 
 return Panels
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000003E"><Properties><string name="Name">Theme</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000041"><Properties><string name="Name">Theme</string><ProtectedString name="Source"><![CDATA[--[[
 	Theme — the visual language of the HUD.
 
 	Bold cartoon typography with thick ink outlines, solid saturated fills,
@@ -12218,7 +12940,7 @@ function Theme.pop(guiObject, from)
 end
 
 return Theme
-]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX00000041"><Properties><string name="Name">World</string></Properties><Item class="ModuleScript" referent="RBX00000040"><Properties><string name="Name">WorldFx</string><ProtectedString name="Source"><![CDATA[--[[
+]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX00000044"><Properties><string name="Name">World</string></Properties><Item class="ModuleScript" referent="RBX00000043"><Properties><string name="Name">WorldFx</string><ProtectedString name="Source"><![CDATA[--[[
 	WorldFx — client-only world presentation:
 	  * Animator: bob/spin/orbit for models tagged "Animated" (cores, disasters,
 	    the storm tower anemometer). Only animates what's near the camera.
@@ -12368,6 +13090,11 @@ local function filterPrompt(prompt, player)
 			if prompt:GetAttribute("BaseSlot") == mySlot and prompt.Enabled then
 				prompt.Enabled = false
 			end
+		elseif prompt:GetAttribute("OwnerOnly") == true then
+			-- purchase prompts (Speed Boost, Instant Hatch) appear only on your own base;
+			-- range (not Enabled, which the server drives) hides them elsewhere
+			local mine = mySlot ~= nil and prompt:GetAttribute("BaseSlot") == mySlot
+			prompt.MaxActivationDistance = mine and (prompt:GetAttribute("Range") or 8) or 0
 		elseif prompt.Name == "SellPrompt" then
 			if prompt:GetAttribute("OwnerOnly") ~= player.UserId and prompt.Enabled then
 				prompt.Enabled = false
@@ -12576,6 +13303,6 @@ end
 
 return WorldFx
 ]]></ProtectedString></Properties></Item></Item></Item></Item></Item>
-<Item class="Players" referent="RBX00000045"><Properties><string name="Name">Players</string><int name="MaxPlayers">8</int></Properties></Item>
-<Item class="TextChatService" referent="RBX00000046"><Properties><string name="Name">TextChatService</string><token name="ChatVersion">1</token></Properties></Item>
+<Item class="Players" referent="RBX00000048"><Properties><string name="Name">Players</string><int name="MaxPlayers">8</int></Properties></Item>
+<Item class="TextChatService" referent="RBX00000049"><Properties><string name="Name">TextChatService</string><token name="ChatVersion">1</token></Properties></Item>
 </roblox>

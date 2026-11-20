@@ -104,19 +104,26 @@ Lua 5.4 VM. That's why all source sticks to the Luau ∩ Lua 5.4 subset
 - `zones.spec`: every zone builder against the zone contract (walkable corridor,
   clear nest, ground coverage, bounds, part budget)
 - `balance.spec`: a simulated player checks the progression pace
+- `monetization.spec`: every purchase path against a mocked MarketplaceService — receipts
+  (duplicates, save failures, failed loads, reconnects), pass ownership (join check, cache,
+  outage, refund), prompts never granting on live servers, the Studio mock, and the shop UI
 
 `node tools/preview.js` renders an approximate **mock** preview of the world
 (three.js, headless). It's only useful for layout and silhouettes; it doesn't
 replace a look in Studio.
 
 ## Status
-Done: the full loop, 13 services, all 9 zones (each with its own builder and
+Done: the full loop, 14 services, all 9 zones (each with its own builder and
 hero landmark), 37 cores and 37 disasters, 9 guardians, the event cycle, PvP theft,
-persistence, the HUD and panels. 161 automated tests pass.
+persistence, the HUD and panels, and monetization (2 Game Passes, 3 Developer
+Products; see [docs/MONETIZATION.md](docs/MONETIZATION.md)). 199 automated tests pass.
+
+Played in Roblox Studio (via the Studio MCP): the solo loop, route, guardians, upgrades,
+Frenzy, phone-size UI, a 2-player PvP session (StudioTestService multiplayer test), and
+every purchase through the Studio mock flow.
 
 ### Not yet verified
-- **Not yet run in Roblox Studio.** No Studio or Studio MCP was available to the
-  build session, so physics feel (treadmill conveyor, knockback), lighting, particle
-  looks, GUI scaling on real devices, and DataStore behavior on live servers still need
-  a pass in Studio.
+- DataStore persistence on live servers (the place is unpublished, so Studio ran from memory).
+- Real Robux purchases: the passes/products don't exist on Roblox yet (ids are 0).
+- Real phones (the Studio device simulator doesn't model the iPhone notch).
 - Sounds aren't included yet (no audio assets).
